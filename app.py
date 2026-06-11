@@ -11,7 +11,7 @@ def get_connection():
         password="63rDt6CTBzx2wGhO",
         database="keuangan_rt",
         port=4000,
-        ssl={'ssl': {}}
+        ssl_ca="/mount/src/keuangan-rt/ca.pem"
     )
 
 # --- TRIK CSS: Mengecilkan Ukuran Semua Tulisan di Aplikasi ---
