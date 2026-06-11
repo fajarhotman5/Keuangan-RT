@@ -60,43 +60,13 @@ def init_and_connect():
 # --- INIT ---
 init_and_connect()
 
-# --- LOGIN ---
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.markdown(
-        "<div style='text-align: center; line-height: 1.3; margin-bottom: 20px;'>"
-        "<p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>"
-        "<p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>"
-        "</div>",
-        unsafe_allow_html=True
-    )
-
-    with st.form("form_login"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        tombol_login = st.form_submit_button("Login")
-
-    if tombol_login:
-        if username == st.secrets["login"]["username"] and password == st.secrets["login"]["password"]:
-            st.session_state.logged_in = True
-            st.rerun()
-        else:
-            st.error("Username atau password salah.")
-
-    st.stop()
-
-st.markdown("""
 st.markdown("""
     <div style='text-align: center; line-height: 1.3;'>
-        <p style='font-size: 40px; margin-bottom: 0px;'>MONEY</p>
-        <p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan KELM</p>
-        <p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap uang keluar</p>
+        <p style='font-size: 40px; margin-bottom: 0px;'>💰💰💰</p>
+        <p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>
+        <p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>
     </div>
 """, unsafe_allow_html=True)
-
-
 
 # --- SEMBUNYIKAN ELEMEN BAWAAN STREAMLIT ---
 st.markdown("""
@@ -294,13 +264,14 @@ if st.session_state.show_riwayat:
     else:
         st.info("Belum ada data pengeluaran.")
 
-# DIAGRAM PENGELUARAN
-if st.session_state.get('show_diagram', False):
+# --- DIAGRAM ---
+if st.session_state.show_diagram:
     conn = get_connection()
-    
-    # Membaca data dari database
-    query = "SELECT k.nama_kategori, p.jumlah FROM pengeluaran p JOIN kategori k ON p.id_kategori = k.id_kategori"
-    df = pd.read_sql(query, conn)
+    df = pd.read_sql("""
+        SELECT k.nama_kategori, p.jumlah
+        FROM pengeluaran p
+        JOIN kategori k ON p.id_kategori = k.id_kategori
+    """, conn)
     conn.close()
 
     if not df.empty:
