@@ -10,7 +10,7 @@ def get_connection():
         user="3rHamxEYY6WE1cR.root",
         password="eycB9zCN73Mug2nP",
         database="keuangan_rt",
-        port=4000
+        port=4000,
         ssl_disabled=True
     )
 
