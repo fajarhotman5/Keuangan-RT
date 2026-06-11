@@ -99,7 +99,23 @@ if tombol_simpan:
 
 # --- RIWAYAT & DIAGRAM ---
 st.write("---")
-if st.button("📋 Lihat Riwayat & Diagram Pengeluaran"):
+
+if 'show_riwayat' not in st.session_state:
+    st.session_state.show_riwayat = False
+if 'show_diagram' not in st.session_state:
+    st.session_state.show_diagram = False
+
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("📋 Riwayat Pengeluaran"):
+        st.session_state.show_riwayat = not st.session_state.show_riwayat
+        st.session_state.show_diagram = False
+with col2:
+    if st.button("📊 Diagram Pengeluaran"):
+        st.session_state.show_diagram = not st.session_state.show_diagram
+        st.session_state.show_riwayat = False
+
+if st.session_state.show_riwayat:
     conn = get_connection()
     df = pd.read_sql("""
         SELECT p.tanggal, k.nama_kategori, p.jumlah, p.keterangan 
@@ -110,20 +126,12 @@ if st.button("📋 Lihat Riwayat & Diagram Pengeluaran"):
     conn.close()
 
     if not df.empty:
-        st.subheader("📋 Riwayat Pengeluaran")
         total = df['jumlah'].sum()
         df_tampil = df.copy()
         df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
         st.dataframe(df_tampil, use_container_width=True, hide_index=True)
         st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
-        st.write("---")
-        st.subheader("📊 Diagram Pengeluaran per Kategori")
-        df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
-        df_chart = df_chart.sort_values('jumlah', ascending=False)
-        st.bar_chart(df_chart.set_index('nama_kategori')['jumlah'])
-
-        import io
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Pengeluaran')
@@ -133,5 +141,21 @@ if st.button("📋 Lihat Riwayat & Diagram Pengeluaran"):
             file_name=f"riwayat_pengeluaran_{datetime.now().strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+    else:
+        st.info("Belum ada data pengeluaran.")
+
+if st.session_state.show_diagram:
+    conn = get_connection()
+    df = pd.read_sql("""
+        SELECT k.nama_kategori, p.jumlah
+        FROM pengeluaran p
+        JOIN kategori k ON p.id_kategori = k.id_kategori
+    """, conn)
+    conn.close()
+
+    if not df.empty:
+        df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
+        df_chart = df_chart.sort_values('jumlah', ascending=False)
+        st.bar_chart(df_chart.set_index('nama_kategori')['jumlah'])
     else:
         st.info("Belum ada data pengeluaran.")
