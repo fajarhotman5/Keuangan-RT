@@ -8,7 +8,7 @@ def get_connection():
     return pymysql.connect(
         host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
         user="3rHamxEYY6WE1cR.root",
-        password="eycB9zCN73Mug2nP",
+        password="63rDt6CTBzx2wGhO",
         database="keuangan_rt",
         port=4000,
         ssl={'ssl': {}}
