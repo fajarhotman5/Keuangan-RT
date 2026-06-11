@@ -42,6 +42,10 @@ def init_db():
                 FOREIGN KEY (id_kategori) REFERENCES kategori(id_kategori)
             )
         """)
+        cursor.execute("""
+            ALTER TABLE pengeluaran 
+            ADD COLUMN IF NOT EXISTS jumlah BIGINT DEFAULT 0
+        """)
         cursor.execute("SELECT COUNT(*) FROM kategori")
         if cursor.fetchone()[0] == 0:
             cursor.executemany(
