@@ -11,6 +11,7 @@ def get_connection():
         password="eycB9zCN73Mug2nP",
         database="keuangan_rt",
         port=4000
+        ssl_disabled=True
     )
 
 # --- TRIK CSS: Mengecilkan Ukuran Semua Tulisan di Aplikasi ---
