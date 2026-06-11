@@ -61,7 +61,7 @@ def init_db():
 init_db()
 
 st.header("💰 Aplikasi Keuangan Rumah Tangga")
-st.caption("Catat pengeluaran harian Anda dengan mudah di sini.")
+st.caption("Catat pengeluaran harian setiap hari.")
 
 # --- Ambil kategori SEBELUM form ---
 conn = get_connection()
