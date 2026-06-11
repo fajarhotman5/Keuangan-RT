@@ -271,6 +271,25 @@ if st.session_state.show_diagram:
     if not df.empty:
         df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
         df_chart = df_chart.sort_values('jumlah', ascending=False)
-        st.bar_chart(df_chart.set_index('nama_kategori')['jumlah'])
+
+        import plotly.express as px
+        fig = px.pie(
+            df_chart,
+            values='jumlah',
+            names='nama_kategori',
+            hole=0.4,
+            color_discrete_sequence=px.colors.sequential.RdBu
+        )
+        fig.update_traces(
+            textposition='inside',
+            textinfo='percent+label',
+            hovertemplate='%{label}<br>Rp %{value:,.0f}<extra></extra>'
+        )
+        fig.update_layout(
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.3),
+            margin=dict(t=20, b=20, l=20, r=20)
+        )
+        st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Belum ada data pengeluaran.")
