@@ -62,6 +62,15 @@ init_and_connect()
 st.header("💰 Informasi Keuangan Kei")
 st.caption("Catat pengeluaran harian setiap hari.")
 
+# --- SEMBUNYIKAN ELEMEN BAWAAN STREAMLIT ---
+st.markdown("""
+    <style>
+    [data-testid="stAppDeployButton"] { display: none !important; }
+    footer { display: none !important; }
+    #MainMenu { display: none !important; }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- Ambil kategori ---
 conn = get_connection()
 cursor = conn.cursor()
