@@ -66,6 +66,7 @@ if 'logged_in' not in st.session_state:
 
 if not st.session_state.logged_in:
     st.markdown(
+        "<div style='text-align: center; line-height: 1.3; margin-bottom: 20px;'>"
         "<p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>"
         "<p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>"
         "</div>",
@@ -89,9 +90,9 @@ if not st.session_state.logged_in:
 st.markdown("""
 st.markdown("""
     <div style='text-align: center; line-height: 1.3;'>
-        <p style='font-size: 40px; margin-bottom: 0px;'>💰💰💰</p>
-        <p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>
-        <p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>
+        <p style='font-size: 40px; margin-bottom: 0px;'>MONEY</p>
+        <p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan KELM</p>
+        <p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap uang keluar</p>
     </div>
 """, unsafe_allow_html=True)
 
