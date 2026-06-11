@@ -137,6 +137,7 @@ if st.session_state.show_riwayat:
 
         st.write("##### Daftar Pengeluaran")
         df_tampil = df.copy()
+        df_tampil.index = range(1, len(df_tampil) + 1)
         df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
         st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), width='stretch')
 
