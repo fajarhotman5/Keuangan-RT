@@ -127,12 +127,12 @@ st.write("---")
 
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("📋 Riwayat Pengeluaran"):
+    if st.button("📋Riwayat Pengeluaran"):
         st.session_state.show_riwayat = not st.session_state.show_riwayat
         st.session_state.show_diagram = False
         st.session_state.edit_id = None
 with col2:
-    if st.button("📊 Diagram Pengeluaran"):
+    if st.button("🍩Diagram Pengeluaran"):
         st.session_state.show_diagram = not st.session_state.show_diagram
         st.session_state.show_riwayat = False
         st.session_state.edit_id = None
