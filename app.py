@@ -39,14 +39,52 @@ def get_connection():
         "-----END CERTIFICATE-----"
     )
     
-    return pymysql.connect(
+    # 1. Masuk dulu ke database bawaan sistem ('sys') yang pasti ada
+    conn = pymysql.connect(
         host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
         user="3rHamxEYY6WE1cR.root",
-        password="63rDt6CTBzx2wGhO",
-        database="keuangan_rt",
+        password="MASUKKAN_PASSWORD_ASLI_TIDB_ANDA", 
+        database="sys", 
         port=4000,
         ssl={'cadata': ca_data}
     )
+    
+    # 2. Buat database 'keuangan_rt' jika belum ada di kluster ini
+    with conn.cursor() as cursor:
+        cursor.execute("CREATE DATABASE IF NOT EXISTS keuangan_rt")
+        cursor.execute("USE keuangan_rt")
+        
+        # 3. Buat tabel 'kategori' jika belum ada
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS kategori (
+                id_kategori INT AUTO_INCREMENT PRIMARY KEY,
+                nama_kategori VARCHAR(50) NOT NULL
+            )
+        """)
+        
+        # 4. Buat tabel 'pengeluaran' jika belum ada
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pengeluaran (
+                id_pengeluaran INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                keterangan TEXT,
+                id_kategori INT,
+                FOREIGN KEY (id_kategori) REFERENCES kategori(id_kategori)
+            )
+        """)
+        
+        # 5. Isi data master kategori jika tabelnya masih kosong baru dibuat
+        cursor.execute("SELECT COUNT(*) FROM kategori")
+        if cursor.fetchone()[0] == 0:
+            kategori_default = [
+                ('Makanan & Minuman',), ('Listrik, Air & Internet',), 
+                ('Belanja Bulanan',), ('Transportasi & Bensin',), 
+                ('Hiburan',), ('Lain-lain',)
+            ]
+            cursor.executemany("INSERT INTO kategori (nama_kategori) VALUES (%s)", kategori_default)
+            conn.commit()
+            
+    return conn
 
 # --- TRIK CSS: Mengecilkan Ukuran Semua Tulisan di Aplikasi ---
 st.markdown("""
