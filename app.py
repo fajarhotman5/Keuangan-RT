@@ -59,20 +59,19 @@ def init_and_connect():
 
 # --- INIT ---
 init_and_connect()
-# --- INIT ---
-init_and_connect()
 
 # --- LOGIN ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
+    uang = "\U0001f4b0"
     st.markdown(
-        "<div style='text-align: center; line-height: 1.3; margin-bottom: 20px;'>"
-        "<p style='font-size: 40px; margin-bottom: 0px;'>\U0001f4b0\U0001f4b0\U0001f4b0</p>"
-        "<p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>"
-        "<p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>"
-        "</div>",
+        f"<div style='text-align: center; line-height: 1.3; margin-bottom: 20px;'>"
+        f"<p style='font-size: 40px; margin-bottom: 0px;'>{uang}{uang}{uang}</p>"
+        f"<p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>"
+        f"<p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>"
+        f"</div>",
         unsafe_allow_html=True
     )
 
