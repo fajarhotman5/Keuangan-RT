@@ -37,6 +37,11 @@ st.subheader("✍️ Input Pengeluaran Baru")
 
 with st.form("form_pengeluaran", clear_on_submit=True):
     tanggal = st.date_input("Tanggal", datetime.now())
+    # ... input lainnya ...
+    keterangan = st.text_input("Keterangan")
+
+    # PASTIKAN BARIS INI MASUK DI DALAM BLOK INDENTASI 'WITH':
+    tombol_simpan = st.form_submit_button("Simpan Pengeluaran")
     
     # Ambil data kategori dari database
     conn = get_connection()
