@@ -59,7 +59,7 @@ def init_and_connect():
 # --- INIT ---
 init_and_connect()
 
-st.markdown("<h3 style='text-align: center;'>💰Informasi Keuangan Kei💰</h3>", unsafe_allow_html=True)
+st.markdown("<h5 style='text-align: center;'>💰Informasi Keuangan Kei💰</h5>", unsafe_allow_html=True)
 st.caption("<div style='text-align: center;'>Catat pengeluaran harian setiap hari.</div>", unsafe_allow_html=True)
 
 # --- SEMBUNYIKAN ELEMEN BAWAAN STREAMLIT ---
