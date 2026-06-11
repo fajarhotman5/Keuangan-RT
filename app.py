@@ -136,16 +136,22 @@ if st.session_state.show_riwayat:
         st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
         st.write("##### Daftar Pengeluaran")
-        for _, row in df.iterrows():
-            col_info, col_edit, col_hapus = st.columns([6, 1, 1])
-            with col_info:
-                st.write(f"**{row['tanggal']}** | {row['nama_kategori']} | Rp {row['jumlah']:,.0f} | {row['keterangan']}")
-            with col_edit:
-                if st.button("✏️", key=f"edit_{row['id_pengeluaran']}"):
-                    st.session_state.edit_id = row['id_pengeluaran']
-            with col_hapus:
-                if st.button("🗑️", key=f"hapus_{row['id_pengeluaran']}"):
-                    st.session_state.hapus_id = row['id_pengeluaran']
+df_tampil = df.copy()
+df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
+df_tampil['Edit'] = '✏️'
+df_tampil['Hapus'] = '🗑️'
+st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), use_container_width=True, hide_index=True)
+
+st.write("**Edit atau Hapus — masukkan nomor urut data:**")
+col_edit_input, col_hapus_input = st.columns(2)
+with col_edit_input:
+    edit_index = st.number_input("Nomor urut untuk diedit", min_value=1, max_value=len(df), step=1, value=1)
+    if st.button("✏️ Edit"):
+        st.session_state.edit_id = int(df.iloc[edit_index - 1]['id_pengeluaran'])
+with col_hapus_input:
+    hapus_index = st.number_input("Nomor urut untuk dihapus", min_value=1, max_value=len(df), step=1, value=1)
+    if st.button("🗑️ Hapus"):
+        st.session_state.hapus_id = int(df.iloc[hapus_index - 1]['id_pengeluaran'])
 
         # --- KONFIRMASI HAPUS ---
         if st.session_state.hapus_id:
