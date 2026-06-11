@@ -14,7 +14,8 @@ def get_connection():
         ssl={'cadata': ca_data}
     )
 
-def init_db():
+@st.cache_resource
+def init_and_connect():
     conn = pymysql.connect(
         host=st.secrets["db"]["host"],
         user=st.secrets["db"]["user"],
@@ -58,7 +59,7 @@ def init_db():
     conn.close()
 
 # --- INIT ---
-init_db()
+init_and_connect()
 
 st.header("💰 Informasi Keuangan Kei")
 st.caption("Catat pengeluaran harian setiap hari.")
