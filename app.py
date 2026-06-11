@@ -294,14 +294,13 @@ if st.session_state.show_riwayat:
     else:
         st.info("Belum ada data pengeluaran.")
 
-# --- DIAGRAM ---
-if st.session_state.show_diagram:
+# DIAGRAM PENGELUARAN
+if st.session_state.get('show_diagram', False):
     conn = get_connection()
-    df = pd.read_sql("""
-        SELECT k.nama_kategori, p.jumlah
-        FROM pengeluaran p
-        JOIN kategori k ON p.id_kategori = k.id_kategori
-    """, conn)
+    
+    # Membaca data dari database
+    query = "SELECT k.nama_kategori, p.jumlah FROM pengeluaran p JOIN kategori k ON p.id_kategori = k.id_kategori"
+    df = pd.read_sql(query, conn)
     conn.close()
 
     if not df.empty:
