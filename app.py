@@ -66,8 +66,12 @@ st.caption("Catat pengeluaran harian setiap hari.")
 st.markdown("""
     <style>
     [data-testid="stAppDeployButton"] { display: none !important; }
+    [data-testid="stToolbar"] { display: none !important; }
+    [data-testid="stDecoration"] { display: none !important; }
+    [data-testid="stStatusWidget"] { display: none !important; }
     footer { display: none !important; }
     #MainMenu { display: none !important; }
+    header { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
