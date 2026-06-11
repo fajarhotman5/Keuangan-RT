@@ -60,7 +60,7 @@ def init_db():
 # --- INIT ---
 init_db()
 
-st.header("💰 Aplikasi Keuangan Rumah Tangga")
+st.header("💰 Informasi Keuangan Kei")
 st.caption("Catat pengeluaran harian setiap hari.")
 
 # --- Ambil kategori SEBELUM form ---
@@ -73,7 +73,7 @@ conn.close()
 opsi_kategori = {item[1]: item[0] for item in daftar_kategori}
 
 # --- FORM (bersih, tanpa duplikat) ---
-st.subheader("✍️ Input Pengeluaran Baru")
+st.subheader("✍️ Input Pengeluaran Baru Disini!")
 with st.form("form_pengeluaran", clear_on_submit=True):
     tanggal = st.date_input("Tanggal", datetime.now())
     kategori_terpilih = st.selectbox("Kategori", list(opsi_kategori.keys()))
