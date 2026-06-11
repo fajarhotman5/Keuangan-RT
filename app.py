@@ -61,8 +61,8 @@ init_and_connect()
 
 st.markdown("""
     <div style='text-align: center; line-height: 1.3;'>
-        <h5 style='margin-bottom: 2px;'>Informasi Keuangan Towak</h5>
-        <p style='color: gray; margin-top: 0px; font-size: 14px;'>harus catat pengeluaran setiap saat</p>
+        <p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Towak</p>
+        <p style='color: gray; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>
     </div>
 """, unsafe_allow_html=True)
 
