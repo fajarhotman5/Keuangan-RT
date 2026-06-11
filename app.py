@@ -8,7 +8,7 @@ def get_connection():
     return mysql.connect(
         host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com", # Host TiDB Anda
         user="3rHamxEYY6WE1cR.root",                                 # User TiDB Anda
-        password="MASUKKAN_PASSWORD_PANJANG_TIDB_ANDA",              # Password hasil generate
+        password="eycB9zCN73Mug2nP",              # Password hasil generate
         database="keuangan_rt",                                      # Database yang baru dibuat
         port=4000                                                    # Wajib ganti ke 4000
     )
