@@ -3,6 +3,7 @@ import pymysql
 import pandas as pd
 import io
 from datetime import datetime, date
+import plotly.express as px
 
 def get_connection():
     ca_data = st.secrets["db"]["ca_data"]
@@ -100,9 +101,9 @@ if 'hapus_id' not in st.session_state:
     st.session_state.hapus_id = None
 
 # --- FORM INPUT ---
-st.markdown("<h7>✍️ Input Pengeluaran Baru Disini!</h7>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:16px; font-weight:600;'>✍️ Input Pengeluaran Baru Disini!</p>", unsafe_allow_html=True)
 with st.form("form_pengeluaran", clear_on_submit=True):
-    tanggal = st.date_input("Tanggal", datetime.now())
+    tanggal = st.date_input("Tanggal", datetime.now(), format="DD/MM/YYYY")
     kategori_terpilih = st.selectbox("Kategori", list(opsi_kategori.keys()))
     jumlah = st.number_input("Jumlah Pengeluaran (Rp)", min_value=0, step=1000)
     keterangan = st.text_input("Keterangan (Contoh: Beli bakso, bayar wifi)")
@@ -150,6 +151,10 @@ if st.session_state.show_riwayat:
     conn.close()
 
     if not df.empty:
+        # Simpan tanggal asli untuk filter & edit, buat kolom tampilan terpisah
+        df['tanggal_asli'] = pd.to_datetime(df['tanggal']).dt.date
+        df['tanggal'] = pd.to_datetime(df['tanggal']).dt.strftime('%d-%m-%Y')
+
         total = df['jumlah'].sum()
         st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
@@ -158,7 +163,7 @@ if st.session_state.show_riwayat:
         df_tampil.index = range(1, len(df_tampil) + 1)
         df_tampil.index.name = "No.Urut"
         df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-        st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), width='stretch')
+        st.dataframe(df_tampil.drop(columns=['id_pengeluaran', 'tanggal_asli']), width='stretch')
 
         # --- EDIT & HAPUS ---
         st.write("**Edit atau Hapus — masukkan nomor urut data:**")
@@ -198,7 +203,7 @@ if st.session_state.show_riwayat:
             st.write("---")
             st.subheader("✏️ Edit Pengeluaran")
             with st.form("form_edit"):
-                tanggal_edit = st.date_input("Tanggal", value=data_edit['tanggal'])
+                tanggal_edit = st.date_input("Tanggal", value=data_edit['tanggal_asli'], format="DD/MM/YYYY")
                 kategori_edit = st.selectbox(
                     "Kategori",
                     list(opsi_kategori.keys()),
@@ -235,22 +240,22 @@ if st.session_state.show_riwayat:
         st.write("**⬇️ Download Riwayat Pengeluaran**")
         col_start, col_end = st.columns(2)
         with col_start:
-            tgl_start = st.date_input("Start", value=df['tanggal'].min())
+            tgl_start = st.date_input("Start", value=df['tanggal_asli'].min(), format="DD/MM/YYYY")
         with col_end:
-            tgl_end = st.date_input("End", value=df['tanggal'].max())
+            tgl_end = st.date_input("End", value=df['tanggal_asli'].max(), format="DD/MM/YYYY")
 
         if st.button("Download Excel"):
             df_filtered = df[
-                (pd.to_datetime(df['tanggal']).dt.date >= tgl_start) &
-                (pd.to_datetime(df['tanggal']).dt.date <= tgl_end)
-            ].drop(columns=['id_pengeluaran'])
+                (df['tanggal_asli'] >= tgl_start) &
+                (df['tanggal_asli'] <= tgl_end)
+            ].drop(columns=['id_pengeluaran', 'tanggal_asli'])
 
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_filtered.to_excel(writer, index=False, sheet_name='Pengeluaran')
 
             st.download_button(
-                label=f"📥 Download {tgl_start} s/d {tgl_end}",
+                label=f"📥 Download {tgl_start.strftime('%d-%m-%Y')} s/d {tgl_end.strftime('%d-%m-%Y')}",
                 data=buffer.getvalue(),
                 file_name=f"pengeluaran_{tgl_start}_{tgl_end}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -273,7 +278,6 @@ if st.session_state.show_diagram:
         df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
         df_chart = df_chart.sort_values('jumlah', ascending=False)
 
-        import plotly.express as px
         fig = px.pie(
             df_chart,
             values='jumlah',
