@@ -138,7 +138,7 @@ if st.session_state.show_riwayat:
         st.write("##### Daftar Pengeluaran")
         df_tampil = df.copy()
         df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-        st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), width='stretch', hide_index=True)
+        st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), width='stretch')
 
         # --- EDIT & HAPUS ---
         st.write("**Edit atau Hapus — masukkan nomor urut data:**")
