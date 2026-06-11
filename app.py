@@ -96,43 +96,41 @@ if tombol_simpan:
     else:
         st.error("Jumlah pengeluaran harus lebih dari Rp 0!")
 
-# --- RIWAYAT ---
+# --- RIWAYAT & DIAGRAM ---
 st.write("---")
-st.subheader("📊 Riwayat Pengeluaran")
-conn = get_connection()
-df = pd.read_sql("""
-    SELECT p.tanggal, k.nama_kategori, p.jumlah, p.keterangan 
-    FROM pengeluaran p
-    JOIN kategori k ON p.id_kategori = k.id_kategori
-    ORDER BY p.tanggal DESC
-""", conn)
-conn.close()
+if st.button("📋 Lihat Riwayat & Diagram Pengeluaran"):
+    conn = get_connection()
+    df = pd.read_sql("""
+        SELECT p.tanggal, k.nama_kategori, p.jumlah, p.keterangan 
+        FROM pengeluaran p
+        JOIN kategori k ON p.id_kategori = k.id_kategori
+        ORDER BY p.tanggal DESC
+    """, conn)
+    conn.close()
 
-if not df.empty:
-    total = df['jumlah'].sum()
-    df_tampil = df.copy()
-    df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-    st.dataframe(df_tampil, use_container_width=True, hide_index=True)
-    st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
+    if not df.empty:
+        st.subheader("📋 Riwayat Pengeluaran")
+        total = df['jumlah'].sum()
+        df_tampil = df.copy()
+        df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
+        st.dataframe(df_tampil, use_container_width=True, hide_index=True)
+        st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
-    # --- Diagram Pengeluaran per Kategori ---
-    st.write("---")
-    st.subheader("📊 Diagram Pengeluaran per Kategori")
-    df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
-    df_chart = df_chart.sort_values('jumlah', ascending=False)
-    st.bar_chart(df_chart.set_index('nama_kategori')['jumlah'])
-    
-    # --- Tombol Download Excel ---
-    import io
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Pengeluaran')
-    
-    st.download_button(
-        label="⬇️ Download sebagai Excel",
-        data=buffer.getvalue(),
-        file_name=f"riwayat_pengeluaran_{datetime.now().strftime('%Y%m%d')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-else:
-    st.info("Belum ada data pengeluaran.")
+        st.write("---")
+        st.subheader("📊 Diagram Pengeluaran per Kategori")
+        df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
+        df_chart = df_chart.sort_values('jumlah', ascending=False)
+        st.bar_chart(df_chart.set_index('nama_kategori')['jumlah'])
+
+        import io
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Pengeluaran')
+        st.download_button(
+            label="⬇️ Download sebagai Excel",
+            data=buffer.getvalue(),
+            file_name=f"riwayat_pengeluaran_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        st.info("Belum ada data pengeluaran.")
