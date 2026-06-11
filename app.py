@@ -2,7 +2,7 @@ import streamlit as st
 import pymysql
 import pandas as pd
 import io
-from datetime import datetime
+from datetime import datetime, date
 
 def get_connection():
     ca_data = st.secrets["db"]["ca_data"]
@@ -105,7 +105,7 @@ if tombol_simpan:
     else:
         st.error("Jumlah pengeluaran harus lebih dari Rp 0!")
 
-# --- RIWAYAT & DIAGRAM ---
+# --- TOMBOL RIWAYAT & DIAGRAM ---
 st.write("---")
 
 col1, col2 = st.columns(2)
@@ -136,26 +136,25 @@ if st.session_state.show_riwayat:
         st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
         st.write("##### Daftar Pengeluaran")
-df_tampil = df.copy()
-df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-df_tampil['Edit'] = '✏️'
-df_tampil['Hapus'] = '🗑️'
-st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), use_container_width=True, hide_index=True)
+        df_tampil = df.copy()
+        df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
+        st.dataframe(df_tampil.drop(columns=['id_pengeluaran']), width='stretch', hide_index=True)
 
-st.write("**Edit atau Hapus — masukkan nomor urut data:**")
-col_edit_input, col_hapus_input = st.columns(2)
-with col_edit_input:
-    edit_index = st.number_input("Nomor urut untuk diedit", min_value=1, max_value=len(df), step=1, value=1)
-    if st.button("✏️ Edit"):
-        st.session_state.edit_id = int(df.iloc[edit_index - 1]['id_pengeluaran'])
-with col_hapus_input:
-    hapus_index = st.number_input("Nomor urut untuk dihapus", min_value=1, max_value=len(df), step=1, value=1)
-    if st.button("🗑️ Hapus"):
-        st.session_state.hapus_id = int(df.iloc[hapus_index - 1]['id_pengeluaran'])
+        # --- EDIT & HAPUS ---
+        st.write("**Edit atau Hapus — masukkan nomor urut data:**")
+        col_edit_input, col_hapus_input = st.columns(2)
+        with col_edit_input:
+            edit_index = st.number_input("Nomor urut untuk diedit", min_value=1, max_value=len(df), step=1, value=1)
+            if st.button("✏️ Edit"):
+                st.session_state.edit_id = int(df.iloc[edit_index - 1]['id_pengeluaran'])
+        with col_hapus_input:
+            hapus_index = st.number_input("Nomor urut untuk dihapus", min_value=1, max_value=len(df), step=1, value=1)
+            if st.button("🗑️ Hapus"):
+                st.session_state.hapus_id = int(df.iloc[hapus_index - 1]['id_pengeluaran'])
 
         # --- KONFIRMASI HAPUS ---
         if st.session_state.hapus_id:
-            st.warning(f"Yakin ingin menghapus data ini?")
+            st.warning("Yakin ingin menghapus data ini?")
             col_ya, col_batal = st.columns(2)
             with col_ya:
                 if st.button("✅ Ya, Hapus"):
@@ -211,17 +210,32 @@ with col_hapus_input:
                 st.session_state.edit_id = None
                 st.rerun()
 
-        # --- DOWNLOAD EXCEL ---
-        buffer = io.BytesIO()
-        df_download = df.drop(columns=['id_pengeluaran'])
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df_download.to_excel(writer, index=False, sheet_name='Pengeluaran')
-        st.download_button(
-            label="⬇️ Download sebagai Excel",
-            data=buffer.getvalue(),
-            file_name=f"riwayat_pengeluaran_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        # --- DOWNLOAD EXCEL DENGAN FILTER TANGGAL ---
+        st.write("---")
+        st.write("**⬇️ Download Riwayat Pengeluaran**")
+        col_start, col_end = st.columns(2)
+        with col_start:
+            tgl_start = st.date_input("Start", value=df['tanggal'].min())
+        with col_end:
+            tgl_end = st.date_input("End", value=df['tanggal'].max())
+
+        if st.button("Download Excel"):
+            df_filtered = df[
+                (pd.to_datetime(df['tanggal']).dt.date >= tgl_start) &
+                (pd.to_datetime(df['tanggal']).dt.date <= tgl_end)
+            ].drop(columns=['id_pengeluaran'])
+
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df_filtered.to_excel(writer, index=False, sheet_name='Pengeluaran')
+
+            st.download_button(
+                label=f"📥 Download {tgl_start} s/d {tgl_end}",
+                data=buffer.getvalue(),
+                file_name=f"pengeluaran_{tgl_start}_{tgl_end}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
     else:
         st.info("Belum ada data pengeluaran.")
 
