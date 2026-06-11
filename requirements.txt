@@ -2,3 +2,4 @@ streamlit
 pymysql
 pandas
 openpyxl
+plotly
