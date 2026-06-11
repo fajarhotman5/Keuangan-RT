@@ -43,7 +43,7 @@ def get_connection():
         host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
         user="3rHamxEYY6WE1cR.root",
         password="63rDt6CTBzx2wGhO",
-        database="keuangan_rt",
+        database="sys",
         port=4000,
         ssl={'cadata': ca_data}
     )
