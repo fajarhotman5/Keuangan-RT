@@ -6,11 +6,11 @@ from datetime import datetime
 # --- UPDATE KONEKSI DATABASE KE CLOUD ---
 def get_connection():
     return mysql.connect(
-        host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com", # Host TiDB Anda
-        user="3rHamxEYY6WE1cR.root",                                 # User TiDB Anda
-        password="eycB9zCN73Mug2nP",              # Password hasil generate
-        database="keuangan_rt",                                      # Database yang baru dibuat
-        port=4000                                                    # Wajib ganti ke 4000
+        host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
+        user="3rHamxEYY6WE1cR.root",
+        password="eycB9zCN73Mug2nP",
+        database="keuangan_rt",
+        port=4000
     )
 
 # --- TRIK CSS: Mengecilkan Ukuran Semua Tulisan di Aplikasi ---
