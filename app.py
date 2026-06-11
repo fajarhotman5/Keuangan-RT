@@ -112,7 +112,7 @@ if not df.empty:
     total = df['jumlah'].sum()
     df_tampil = df.copy()
     df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-    st.dataframe(df_tampil, use_container_width=True)
+    st.dataframe(df_tampil, use_container_width=True, hide_index=True)
     st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
     # --- Tombol Download Excel ---
