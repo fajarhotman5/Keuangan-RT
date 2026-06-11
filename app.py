@@ -43,7 +43,7 @@ def get_connection():
     conn = pymysql.connect(
         host="gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
         user="3rHamxEYY6WE1cR.root",
-        password="MASUKKAN_PASSWORD_ASLI_TIDB_ANDA", 
+        password="tqQT5zg2PNmTJTcN", 
         database="sys", 
         port=4000,
         ssl={'cadata': ca_data}
