@@ -59,7 +59,7 @@ def init_and_connect():
 # --- INIT ---
 init_and_connect()
 
-st.markdown("<h3 style='text-align: center;'>💰 Informasi Keuangan Kei</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center;'>💰Informasi Keuangan Kei💰</h3>", unsafe_allow_html=True)
 st.caption("<div style='text-align: center;'>Catat pengeluaran harian setiap hari.</div>", unsafe_allow_html=True)
 
 # --- SEMBUNYIKAN ELEMEN BAWAAN STREAMLIT ---
@@ -95,7 +95,7 @@ if 'hapus_id' not in st.session_state:
     st.session_state.hapus_id = None
 
 # --- FORM INPUT ---
-st.markdown("<h5>✍️ Input Pengeluaran Baru Disini!</h5>", unsafe_allow_html=True)
+st.markdown("<h7>✍️ Input Pengeluaran Baru Disini!</h7>", unsafe_allow_html=True)
 with st.form("form_pengeluaran", clear_on_submit=True):
     tanggal = st.date_input("Tanggal", datetime.now())
     kategori_terpilih = st.selectbox("Kategori", list(opsi_kategori.keys()))
