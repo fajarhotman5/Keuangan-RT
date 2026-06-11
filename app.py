@@ -115,6 +115,13 @@ if not df.empty:
     st.dataframe(df_tampil, use_container_width=True, hide_index=True)
     st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
 
+    # --- Diagram Pengeluaran per Kategori ---
+    st.write("---")
+    st.subheader("📊 Diagram Pengeluaran per Kategori")
+    df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
+    df_chart = df_chart.sort_values('jumlah', ascending=False)
+    st.bar_chart(df_chart.set_index('nama_kategori')['jumlah'])
+    
     # --- Tombol Download Excel ---
     import io
     buffer = io.BytesIO()
