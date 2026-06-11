@@ -110,8 +110,22 @@ conn.close()
 
 if not df.empty:
     total = df['jumlah'].sum()
-    df['jumlah'] = df['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-    st.dataframe(df, use_container_width=True)
+    df_tampil = df.copy()
+    df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
+    st.dataframe(df_tampil, use_container_width=True)
     st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
+
+    # --- Tombol Download Excel ---
+    import io
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Pengeluaran')
+    
+    st.download_button(
+        label="⬇️ Download sebagai Excel",
+        data=buffer.getvalue(),
+        file_name=f"riwayat_pengeluaran_{datetime.now().strftime('%Y%m%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 else:
     st.info("Belum ada data pengeluaran.")
