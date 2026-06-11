@@ -1,6 +1,7 @@
 import streamlit as st
 import pymysql
 import pandas as pd
+import io
 from datetime import datetime
 
 def get_connection():
