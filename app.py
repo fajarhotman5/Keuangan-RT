@@ -2,299 +2,381 @@ import streamlit as st
 import pymysql
 import pandas as pd
 import io
-from datetime import datetime, date
+from datetime import datetime
 import plotly.express as px
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
 
-def get_connection():
-    ca_data = st.secrets["db"]["ca_data"]
-    return pymysql.connect(
-        host=st.secrets["db"]["host"],
-        user=st.secrets["db"]["user"],
-        password=st.secrets["db"]["password"],
-        database="keuangan_rt",
-        port=4000,
-        ssl={'cadata': ca_data}
-    )
+# --- CONFIG & STYLING ---
+st.set_page_config(page_title="Keuangan Kei", page_icon="💰", layout="centered")
 
-@st.cache_resource
-def init_and_connect():
-    conn = pymysql.connect(
-        host=st.secrets["db"]["host"],
-        user=st.secrets["db"]["user"],
-        password=st.secrets["db"]["password"],
-        database="sys",
-        port=4000,
-        ssl={'cadata': st.secrets["db"]["ca_data"]}
-    )
-    with conn.cursor() as cursor:
-        cursor.execute("CREATE DATABASE IF NOT EXISTS keuangan_rt")
-        cursor.execute("USE keuangan_rt")
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS kategori (
-                id_kategori INT AUTO_INCREMENT PRIMARY KEY,
-                nama_kategori VARCHAR(50) NOT NULL
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS pengeluaran (
-                id_pengeluaran INT AUTO_INCREMENT PRIMARY KEY,
-                tanggal DATE NOT NULL,
-                keterangan TEXT,
-                jumlah BIGINT DEFAULT 0,
-                id_kategori INT,
-                FOREIGN KEY (id_kategori) REFERENCES kategori(id_kategori)
-            )
-        """)
-        cursor.execute("ALTER TABLE pengeluaran ADD COLUMN IF NOT EXISTS jumlah BIGINT DEFAULT 0")
-        cursor.execute("SELECT COUNT(*) FROM kategori")
-        if cursor.fetchone()[0] == 0:
-            cursor.executemany(
-                "INSERT INTO kategori (nama_kategori) VALUES (%s)",
-                [('Makanan & Minuman',), ('Listrik, Air & Internet',),
-                 ('Belanja Bulanan',), ('Transportasi & Bensin',),
-                 ('Hiburan',), ('Lain-lain',)]
-            )
-            conn.commit()
-    conn.close()
-
-# --- INIT ---
-init_and_connect()
-
-st.markdown("""
-    <div style='text-align: center; line-height: 1.3;'>
-        <p style='font-size: 40px; margin-bottom: 0px;'>💰💰💰</p>
-        <p style='font-size: 24px; font-weight: bold; margin-bottom: 2px;'>Informasi Keuangan Kei</p>
-        <p style='color: #8B0000; margin-top: 0px; font-size: 14px;'>harus catat setiap saat</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# --- SEMBUNYIKAN ELEMEN BAWAAN STREAMLIT ---
+# Custom CSS untuk tema Maroon, Putih, Hitam & Menyembunyikan elemen bawaan
 st.markdown("""
     <style>
+    /* Hide Streamlit Elements */
     [data-testid="stAppDeployButton"] { display: none !important; }
     [data-testid="stToolbar"] { display: none !important; }
     [data-testid="stDecoration"] { display: none !important; }
     [data-testid="stStatusWidget"] { display: none !important; }
     footer { display: none !important; }
-    #MainMenu { display: none !important; }
     header { display: none !important; }
+    
+    /* Global Styles */
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #FFFFFF;
+        color: #000000;
+    }
+    
+    /* Button Customization */
+    div.stButton > button {
+        background-color: #8B0000;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    div.stButton > button:hover {
+        background-color: #000000;
+        color: #FFFFFF;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Ambil kategori ---
-conn = get_connection()
-cursor = conn.cursor()
-cursor.execute("SELECT id_kategori, nama_kategori FROM kategori")
-daftar_kategori = cursor.fetchall()
-cursor.close()
-conn.close()
-opsi_kategori = {item[1]: item[0] for item in daftar_kategori}
+# --- DATABASE CONNECTION ---
+def get_connection(db_name="keuangan_rt"):
+    ca_data = st.secrets["db"]["ca_data"]
+    return pymysql.connect(
+        host=st.secrets["db"]["host"],
+        user=st.secrets["db"]["user"],
+        password=st.secrets["db"]["password"],
+        database=db_name,
+        port=4000,
+        ssl={'cadata': ca_data}
+    )
 
-# --- SESSION STATE ---
-if 'show_riwayat' not in st.session_state:
-    st.session_state.show_riwayat = False
-if 'show_diagram' not in st.session_state:
-    st.session_state.show_diagram = False
-if 'edit_id' not in st.session_state:
-    st.session_state.edit_id = None
-if 'hapus_id' not in st.session_state:
-    st.session_state.hapus_id = None
-
-# --- FORM INPUT ---
-st.markdown("<p style='font-size:16px; font-weight:600;'>✍️Input Pengeluaran</p>", unsafe_allow_html=True)
-with st.form("form_pengeluaran", clear_on_submit=True):
-    tanggal = st.date_input("Tanggal", datetime.now(), format="DD/MM/YYYY")
-    kategori_terpilih = st.selectbox("Kategori", list(opsi_kategori.keys()))
-    jumlah = st.number_input("Jumlah Pengeluaran (Rp)", min_value=0, step=1000)
-    keterangan = st.text_input("Keterangan (Contoh: Beli bakso, bayar wifi)")
-    tombol_simpan = st.form_submit_button("Simpan Pengeluaran")
-
-if tombol_simpan:
-    if jumlah > 0:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO pengeluaran (tanggal, id_kategori, jumlah, keterangan) VALUES (%s, %s, %s, %s)",
-            (tanggal, opsi_kategori[kategori_terpilih], jumlah, keterangan)
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
-        st.success(f"Berhasil mencatat pengeluaran Rp {jumlah:,.0f}!")
-    else:
-        st.error("Jumlah pengeluaran harus lebih dari Rp 0!")
-
-# --- TOMBOL RIWAYAT & DIAGRAM ---
-st.write("---")
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("📋Riwayat Pengeluaran"):
-        st.session_state.show_riwayat = not st.session_state.show_riwayat
-        st.session_state.show_diagram = False
-        st.session_state.edit_id = None
-with col2:
-    if st.button("🍩Diagram Pengeluaran"):
-        st.session_state.show_diagram = not st.session_state.show_diagram
-        st.session_state.show_riwayat = False
-        st.session_state.edit_id = None
-
-# --- RIWAYAT ---
-if st.session_state.show_riwayat:
-    conn = get_connection()
-    df = pd.read_sql("""
-        SELECT p.id_pengeluaran, p.tanggal, k.nama_kategori, p.jumlah, p.keterangan 
-        FROM pengeluaran p
-        JOIN kategori k ON p.id_kategori = k.id_kategori
-        ORDER BY p.tanggal DESC
-    """, conn)
-    conn.close()
-
-    if not df.empty:
-        # Simpan tanggal asli untuk filter & edit, buat kolom tampilan terpisah
-        df['tanggal_asli'] = pd.to_datetime(df['tanggal']).dt.date
-        df['tanggal'] = pd.to_datetime(df['tanggal']).dt.strftime('%d-%m-%Y')
-
-        total = df['jumlah'].sum()
-        st.metric("Total Pengeluaran", f"Rp {total:,.0f}")
-
-        st.write("##### Daftar Pengeluaran")
-        df_tampil = df.copy()
-        df_tampil.index = range(1, len(df_tampil) + 1)
-        df_tampil.index.name = "No.Urut"
-        df_tampil['jumlah'] = df_tampil['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-        st.dataframe(df_tampil.drop(columns=['id_pengeluaran', 'tanggal_asli']), width='stretch')
-
-        # --- EDIT & HAPUS ---
-        st.write("**Edit atau Hapus — masukkan nomor urut data:**")
-        col_edit_input, col_hapus_input = st.columns(2)
-        with col_edit_input:
-            edit_index = st.number_input("Nomor urut untuk diedit", min_value=1, max_value=len(df), step=1, value=1)
-            if st.button("✏️ Edit"):
-                st.session_state.edit_id = int(df.iloc[edit_index - 1]['id_pengeluaran'])
-        with col_hapus_input:
-            hapus_index = st.number_input("Nomor urut untuk dihapus", min_value=1, max_value=len(df), step=1, value=1)
-            if st.button("🗑️ Hapus"):
-                st.session_state.hapus_id = int(df.iloc[hapus_index - 1]['id_pengeluaran'])
-
-        # --- KONFIRMASI HAPUS ---
-        if st.session_state.hapus_id:
-            st.warning("Yakin ingin menghapus data ini?")
-            col_ya, col_batal = st.columns(2)
-            with col_ya:
-                if st.button("✅ Ya, Hapus"):
-                    conn = get_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM pengeluaran WHERE id_pengeluaran = %s", (st.session_state.hapus_id,))
-                    conn.commit()
-                    cursor.close()
-                    conn.close()
-                    st.session_state.hapus_id = None
-                    st.success("Data berhasil dihapus!")
-                    st.rerun()
-            with col_batal:
-                if st.button("❌ Batal"):
-                    st.session_state.hapus_id = None
-                    st.rerun()
-
-        # --- FORM EDIT ---
-        if st.session_state.edit_id:
-            data_edit = df[df['id_pengeluaran'] == st.session_state.edit_id].iloc[0]
-            st.write("---")
-            st.subheader("✏️ Edit Pengeluaran")
-            with st.form("form_edit"):
-                tanggal_edit = st.date_input("Tanggal", value=data_edit['tanggal_asli'], format="DD/MM/YYYY")
-                kategori_edit = st.selectbox(
-                    "Kategori",
-                    list(opsi_kategori.keys()),
-                    index=list(opsi_kategori.keys()).index(data_edit['nama_kategori'])
-                )
-                jumlah_edit = st.number_input("Jumlah (Rp)", min_value=0, step=1000, value=int(data_edit['jumlah']))
-                keterangan_edit = st.text_input("Keterangan", value=data_edit['keterangan'] or "")
-                col_simpan, col_batal = st.columns(2)
-                with col_simpan:
-                    tombol_update = st.form_submit_button("💾 Simpan Perubahan")
-                with col_batal:
-                    tombol_batal = st.form_submit_button("❌ Batal")
-
-            if tombol_update:
-                conn = get_connection()
-                cursor = conn.cursor()
-                cursor.execute(
-                    "UPDATE pengeluaran SET tanggal=%s, id_kategori=%s, jumlah=%s, keterangan=%s WHERE id_pengeluaran=%s",
-                    (tanggal_edit, opsi_kategori[kategori_edit], jumlah_edit, keterangan_edit, st.session_state.edit_id)
-                )
-                conn.commit()
-                cursor.close()
-                conn.close()
-                st.session_state.edit_id = None
-                st.success("Data berhasil diupdate!")
-                st.rerun()
-
-            if tombol_batal:
-                st.session_state.edit_id = None
-                st.rerun()
-
-        # --- DOWNLOAD EXCEL DENGAN FILTER TANGGAL ---
-        st.write("---")
-        st.write("**⬇️ Download Riwayat Pengeluaran**")
-        col_start, col_end = st.columns(2)
-        with col_start:
-            tgl_start = st.date_input("Start", value=df['tanggal_asli'].min(), format="DD/MM/YYYY")
-        with col_end:
-            tgl_end = st.date_input("End", value=df['tanggal_asli'].max(), format="DD/MM/YYYY")
-
-        if st.button("Download Excel"):
-            df_filtered = df[
-                (df['tanggal_asli'] >= tgl_start) &
-                (df['tanggal_asli'] <= tgl_end)
-            ].drop(columns=['id_pengeluaran', 'tanggal_asli'])
-
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_filtered.to_excel(writer, index=False, sheet_name='Pengeluaran')
-
-            st.download_button(
-                label=f"📥 Download {tgl_start.strftime('%d-%m-%Y')} s/d {tgl_end.strftime('%d-%m-%Y')}",
-                data=buffer.getvalue(),
-                file_name=f"pengeluaran_{tgl_start}_{tgl_end}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+@st.cache_resource
+def init_db():
+    # Koneksi awal ke sys untuk membuat database
+    conn = get_connection(db_name="sys")
+    with conn.cursor() as cursor:
+        cursor.execute("CREATE DATABASE IF NOT EXISTS keuangan_rt")
+        cursor.execute("USE keuangan_rt")
+        
+        # Tabel Transaksi (Menggabungkan pemasukan & pengeluaran untuk mempermudah kalkulasi wallet)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS transaksi (
+                id_transaksi INT AUTO_INCREMENT PRIMARY KEY,
+                jenis ENUM('Pemasukan', 'Pengeluaran') NOT NULL,
+                tanggal DATE NOT NULL,
+                wallet VARCHAR(30) NOT NULL,
+                kategori VARCHAR(50) NOT NULL,
+                jumlah BIGINT NOT NULL DEFAULT 0,
+                keterangan TEXT
             )
-
-    else:
-        st.info("Belum ada data pengeluaran.")
-
-# --- DIAGRAM ---
-if st.session_state.show_diagram:
-    conn = get_connection()
-    df = pd.read_sql("""
-        SELECT k.nama_kategori, p.jumlah
-        FROM pengeluaran p
-        JOIN kategori k ON p.id_kategori = k.id_kategori
-    """, conn)
+        """)
+    conn.commit()
     conn.close()
 
-    if not df.empty:
-        df_chart = df.groupby('nama_kategori')['jumlah'].sum().reset_index()
-        df_chart = df_chart.sort_values('jumlah', ascending=False)
+init_db()
 
+# --- VALID LISTS ---
+LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
+KAT_PENGELUARAN = ['Makanan & Minuman', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
+KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
+
+# --- APP HEADER ---
+st.markdown("""
+    <div style='text-align: center; margin-bottom: 20px;'>
+        <p style='font-size: 26px; font-weight: bold; color: #000000; margin-bottom: 0px;'>💰 Informasi Keuangan Kei</p>
+        <p style='color: #8B0000; font-size: 13px; font-style: italic; margin-top: 0px;'>Harus catat setiap saat</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# --- DATA FETCHING & CALCULATIONS ---
+conn = get_connection()
+df_trans = pd.read_sql("SELECT * FROM transaksi ORDER BY tanggal DESC, id_transaksi DESC", conn)
+conn.close()
+
+# Hitung Saldo & Ringkasan
+if not df_trans.empty:
+    df_trans['tanggal'] = pd.to_datetime(df_trans['tanggal']).dt.date
+    total_masuk = df_trans[df_trans['jenis'] == 'Pemasukan']['jumlah'].sum()
+    total_keluar = df_trans[df_trans['jenis'] == 'Pengeluaran']['jumlah'].sum()
+    sisa_saldo = total_masuk - total_keluar
+    
+    # Hitung saldo per wallet
+    wallet_balances = {}
+    for w in LIST_WALLET:
+        w_masuk = df_trans[(df_trans['wallet'] == w) & (df_trans['jenis'] == 'Pemasukan')]['jumlah'].sum()
+        w_keluar = df_trans[(df_trans['wallet'] == w) & (df_trans['jenis'] == 'Pengeluaran')]['jumlah'].sum()
+        wallet_balances[w] = w_masuk - w_keluar
+else:
+    sisa_saldo = 0
+    total_keluar = 0
+    wallet_balances = {w: 0 for w in LIST_WALLET}
+
+# --- BARIS PERTAMA: INFORMASI SALDO & PENGELUARAN ---
+col_s1, col_s2 = st.columns(2)
+with col_s1:
+    st.markdown(f"""
+        <div style='background-color: #8B0000; padding: 12px; border-radius: 10px; text-align: center; color: white;'>
+            <p style='margin: 0; font-size: 13px; font-weight: 300;'>Sisa Saldo</p>
+            <p style='margin: 0; font-size: 20px; font-weight: bold;'>Rp {sisa_saldo:,.0f}</p>
+        </div>
+    """, unsafe_allow_html=True)
+with col_s2:
+    st.markdown(f"""
+        <div style='background-color: #000000; padding: 12px; border-radius: 10px; text-align: center; color: white;'>
+            <p style='margin: 0; font-size: 13px; font-weight: 300;'>Total Pengeluaran</p>
+            <p style='margin: 0; font-size: 20px; font-weight: bold;'>Rp {total_keluar:,.0f}</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.write("")
+
+# --- BARIS KEDUA: NAVIGASI MENU (IKON) ---
+# Menggunakan Session State untuk menu aktif
+if 'menu_aktif' not in st.session_state:
+    st.session_state.menu_aktif = None
+
+col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
+with col_m1:
+    if st.button("➕ Tambah", use_container_width=True): st.session_state.menu_aktif = 'tambah'
+with col_m2:
+    if st.button("📥 Unduh", use_container_width=True): st.session_state.menu_aktif = 'unduh'
+with col_m3:
+    if st.button("📋 Riwayat", use_container_width=True): st.session_state.menu_aktif = 'riwayat'
+with col_m4:
+    if st.button("📊 Rekap", use_container_width=True): st.session_state.menu_aktif = 'rekap'
+with col_m5:
+    if st.button("💳 Wallet", use_container_width=True): st.session_state.menu_aktif = 'wallet'
+
+st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px; border-color: #8B0000;'>", unsafe_allow_html=True)
+
+# --- FUNGSI CANVAS UNTUK PDF HEADER/FOOTER ---
+class NumberedCanvas(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        canvas.Canvas.__init__(self, *args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_number(num_pages)
+            canvas.Canvas.showPage(self)
+        canvas.Canvas.save(self)
+
+    def draw_page_number(self, page_count):
+        self.saveState()
+        self.setFont("Helvetica", 9)
+        self.setFillColor(colors.HexColor("#000000"))
+        
+        # Header
+        self.setStrokeColor(colors.HexColor("#8B0000"))
+        self.setLineWidth(1)
+        self.line(54, 750, 558, 750)
+        self.drawString(54, 755, "LAPORAN KEUANGAN KEI")
+        
+        # Footer
+        self.line(54, 50, 558, 50)
+        page_text = f"Halaman {self._pageNumber} dari {page_count}"
+        self.drawRightString(558, 38, page_text)
+        self.drawString(54, 38, f"Dicetak pada: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        self.restoreState()
+
+# --- LOGIKA KONTEN BERDASARKAN MENU ---
+
+# 1. MENU: TAMBAH (PEMASUKAN / PENGELUARAN)
+if st.session_state.menu_aktif == 'tambah':
+    st.markdown("<h5 style='color: #8B0000;'>➕ Tambah Transaksi</h5>", unsafe_allow_html=True)
+    jenis_tx = st.radio("Pilih Jenis Transaksi:", ["Pengeluaran", "Pemasukan"], horizontal=True)
+    
+    with st.form("form_transaksi", clear_on_submit=True):
+        tgl = st.date_input("Tanggal", datetime.now())
+        wlt = st.selectbox("Pilih Wallet", LIST_WALLET)
+        kat = st.selectbox("Kategori", KAT_PENGELUARAN if jenis_tx == "Pengeluaran" else KAT_PEMASUKAN)
+        jml = st.number_input("Jumlah (Rp)", min_value=0, step=1000)
+        ket = st.text_input("Keterangan")
+        
+        simpan = st.form_submit_button("Simpan Data")
+        if simpan:
+            if jml > 0:
+                conn = get_connection()
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO transaksi (jenis, tanggal, wallet, kategori, jumlah, keterangan) VALUES (%s, %s, %s, %s, %s, %s)",
+                        (jenis_tx, tgl, wlt, kat, jml, ket)
+                    )
+                conn.commit()
+                conn.close()
+                st.success(f"Berhasil mencatat {jenis_tx} sebesar Rp {jml:,.0f}")
+                st.rerun()
+            else:
+                st.error("Jumlah harus lebih besar dari Rp 0!")
+
+# 2. MENU: UNDUH (EXCEL / PDF)
+elif st.session_state.menu_aktif == 'unduh':
+    st.markdown("<h5 style='color: #8B0000;'>📥 Ekspor Laporan Keuangan</h5>", unsafe_allow_html=True)
+    if df_trans.empty:
+        st.info("Belum ada data untuk diekspor.")
+    else:
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            tgl_awal = st.date_input("Tanggal Mulai", df_trans['tanggal'].min())
+        with col_d2:
+            tgl_akhir = st.date_input("Tanggal Selesai", df_trans['tanggal'].max())
+            
+        df_filter = df_trans[(df_trans['tanggal'] >= tgl_awal) & (df_trans['tanggal'] <= tgl_akhir)].copy()
+        
+        if df_filter.empty:
+            st.warning("Tidak ada transaksi pada rentang tanggal tersebut.")
+        else:
+            col_b1, col_b2 = st.columns(2)
+            
+            # Export EXCEL
+            with col_b1:
+                buffer_xl = io.BytesIO()
+                with pd.ExcelWriter(buffer_xl, engine='openpyxl') as writer:
+                    df_filter.to_excel(writer, index=False, sheet_name='Laporan')
+                st.download_button(
+                    label="🟢 Unduh Excel",
+                    data=buffer_xl.getvalue(),
+                    file_name=f"Laporan_Keuangan_{tgl_awal}_{tgl_akhir}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+                
+            # Export PDF
+            with col_b2:
+                buffer_pdf = io.BytesIO()
+                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=54, leftMargin=54, topMargin=72, bottomMargin=72)
+                story = []
+                
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#8B0000'), alignment=1, spaceAfter=20)
+                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#000000'), alignment=1, spaceAfter=20)
+                cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=9, leading=11)
+                header_style = ParagraphStyle(name='HeaderStyle', fontName='Helvetica-Bold', fontSize=9, textColor=colors.white, leading=11)
+                
+                story.append(Paragraph("LAPORAN PERINCIAN KEUANGAN", title_style))
+                story.append(Paragraph(f"Periode: {tgl_awal.strftime('%d/%m/%Y')} s/d {tgl_akhir.strftime('%d/%m/%Y')}", sub_style))
+                story.append(Spacer(1, 10))
+                
+                # Menyiapkan data tabel PDF
+                table_data = [[Paragraph("Jenis", header_style), Paragraph("Tanggal", header_style), Paragraph("Wallet", header_style), Paragraph("Kategori", header_style), Paragraph("Jumlah (Rp)", header_style), Paragraph("Keterangan", header_style)]]
+                
+                for _, row in df_filter.iterrows():
+                    table_data.append([
+                        Paragraph(str(row['jenis']), cell_style),
+                        Paragraph(row['tanggal'].strftime('%d/%m/%Y'), cell_style),
+                        Paragraph(str(row['wallet']), cell_style),
+                        Paragraph(str(row['kategori']), cell_style),
+                        Paragraph(f"{row['jumlah']:,.0f}", cell_style),
+                        Paragraph(str(row['keterangan'] or '-'), cell_style)
+                    ])
+                
+                # 504 pt adalah lebar area cetak bersih pada kertas letter margin 54
+                col_widths = [65, 60, 60, 95, 74, 150] 
+                t = Table(table_data, colWidths=col_widths, repeatRows=1)
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('BOTTOMPADDING', (0,0), (-1,0), 6),
+                    ('TOPPADDING', (0,0), (-1,0), 6),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')])
+                ]))
+                story.append(t)
+                doc.build(story, canvasmaker=NumberedCanvas)
+                
+                st.download_button(
+                    label="🔴 Unduh PDF",
+                    data=buffer_pdf.getvalue(),
+                    file_name=f"Laporan_Keuangan_{tgl_awal}_{tgl_akhir}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+
+# 3. MENU: RIWAYAT (TABEL & SEARCH)
+elif st.session_state.menu_aktif == 'riwayat':
+    st.markdown("<h5 style='color: #8B0000;'>📋 Riwayat Transaksi</h5>", unsafe_allow_html=True)
+    if df_trans.empty:
+        st.info("Belum ada riwayat transaksi.")
+    else:
+        cari = st.text_input("🔍 Cari Kategori atau Keterangan:")
+        df_show = df_trans.copy()
+        if cari:
+            df_show = df_show[
+                df_show['kategori'].str.contains(cari, case=False, na=False) | 
+                df_show['keterangan'].str.contains(cari, case=False, na=False)
+            ]
+        
+        # Format tampilan tabel
+        df_show['tanggal'] = df_show['tanggal'].apply(lambda x: x.strftime('%d-%m-%Y'))
+        df_show['jumlah'] = df_show['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
+        df_show = df_show.drop(columns=['id_transaksi']).reset_index(drop=True)
+        df_show.index += 1
+        
+        st.dataframe(df_show, use_container_width=True)
+
+# 4. MENU: REKAP (GRAFIK PER KATEGORI)
+elif st.session_state.menu_aktif == 'rekap':
+    st.markdown("<h5 style='color: #8B0000;'>📊 Detail Grafik Rekap</h5>", unsafe_allow_html=True)
+    df_keluar = df_trans[df_trans['jenis'] == 'Pengeluaran']
+    
+    if df_keluar.empty:
+        st.info("Belum ada data pengeluaran untuk dianalisis.")
+    else:
+        df_chart = df_keluar.groupby('kategori')['jumlah'].sum().reset_index()
+        
         fig = px.pie(
-            df_chart,
-            values='jumlah',
-            names='nama_kategori',
+            df_chart, 
+            values='jumlah', 
+            names='kategori', 
             hole=0.4,
-            color_discrete_sequence=px.colors.sequential.RdBu
+            color_discrete_sequence=['#8B0000', '#000000', '#A52A2A', '#555555', '#D3D3D3', '#7F0000']
         )
         fig.update_traces(
-            textposition='inside',
+            textposition='inside', 
             textinfo='percent+label',
             hovertemplate='%{label}<br>Rp %{value:,.0f}<extra></extra>'
         )
         fig.update_layout(
             showlegend=True,
             legend=dict(orientation="h", yanchor="bottom", y=-0.3),
-            margin=dict(t=20, b=20, l=20, r=20)
+            margin=dict(t=10, b=10, l=10, r=10)
         )
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Belum ada data pengeluaran.")
+
+# 5. MENU: WALLET (SALDO BERJALAN DOMPET)
+elif st.session_state.menu_aktif == 'wallet':
+    st.markdown("<h5 style='color: #8B0000;'>💳 Informasi Saldo Wallet</h5>", unsafe_allow_html=True)
+    
+    # Grid Tampilan Informasi Wallet secara rapi
+    for i in range(0, len(LIST_WALLET), 2):
+        cols = st.columns(2)
+        for j in range(2):
+            if i + j < len(LIST_WALLET):
+                w_name = LIST_WALLET[i + j]
+                w_bal = wallet_balances[w_name]
+                
+                # Warnai merah maroon jika minus, hitam jika aman
+                bg_color = "#8B0000" if w_bal < 0 else "#000000"
+                
+                cols[j].markdown(f"""
+                    <div style='background-color: {bg_color}; padding: 15px; border-radius: 8px; color: white; margin-bottom: 10px;'>
+                        <p style='margin:0; font-size:12px; font-weight:300;'>{w_name}</p>
+                        <p style='margin:0; font-size:16px; font-weight:bold;'>Rp {w_bal:,.0f}</p>
+                    </div>
+                """, unsafe_allow_html=True)
