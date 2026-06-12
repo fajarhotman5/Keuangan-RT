@@ -50,7 +50,8 @@ st.markdown("""
     /* DESAIN TABEL MINIMALIS KUSTOM (Bukan ala Excel) */
     .table-container {
         overflow-x: auto;
-        margin-top: 15px;
+        margin-top: 5px;
+        margin-bottom: 15px;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .custom-table {
@@ -123,6 +124,7 @@ init_db()
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
+ALL_KATEGORI = list(set(KAT_PENGELUARAN + KAT_PEMASUKAN))
 
 # --- APP HEADER ---
 st.markdown("""
@@ -189,39 +191,6 @@ with col_m5:
     if st.button("💳 Wallet", use_container_width=True): st.session_state.menu_aktif = 'wallet'
 
 st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px; border-color: #8B0000;'>", unsafe_allow_html=True)
-
-# --- FUNGSI CANVAS UNTUK PDF ---
-class NumberedCanvas(canvas.Canvas):
-    def __init__(self, *args, **kwargs):
-        canvas.Canvas.__init__(self, *args, **kwargs)
-        self._saved_page_states = []
-
-    def showPage(self):
-        self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
-
-    def save(self):
-        num_pages = len(self._saved_page_states)
-        for state in self._saved_page_states:
-            self.__dict__.update(state)
-            self.draw_page_number(num_pages)
-            canvas.Canvas.showPage(self)
-        canvas.Canvas.save(self)
-
-    def draw_page_number(self, page_count):
-        self.saveState()
-        self.setFont("Helvetica", 9)
-        self.setFillColor(colors.HexColor("#000000"))
-        self.setStrokeColor(colors.HexColor("#8B0000"))
-        self.setLineWidth(1)
-        self.line(54, 750, 558, 750)
-        self.drawString(54, 755, "LAPORAN KEUANGAN KEI")
-        
-        self.line(54, 50, 558, 50)
-        page_text = f"Halaman {self._pageNumber} dari {page_count}"
-        self.drawRightString(558, 38, page_text)
-        self.drawString(54, 38, f"Dicetak pada: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        self.restoreState()
 
 # --- LOGIKA KONTEN MENU ---
 
@@ -324,7 +293,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')])
                 ]))
                 story.append(t)
-                doc.build(story, canvasmaker=NumberedCanvas)
+                doc.build(story, canvasmaker=canvas.Canvas) # Perbaikan pemanggilan canvas standard bawaan reportlab
                 
                 st.download_button(
                     label="🔴 Unduh File PDF",
@@ -334,14 +303,13 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT (TABEL MINIMALIS KUSTOM DENGAN FITUR EDIT & HAPUS)
+# 3. MENU: RIWAYAT (TABEL BERSIH TANPA BOCOR)
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat Buku Kas</h4>", unsafe_allow_html=True)
     
     if df_trans.empty:
         st.info("Belum ada mutasi/transaksi tercatat.")
     else:
-        # Filter Pencarian Cepat
         cari = st.text_input("🔍 Filter Pencarian Cepat (Kategori / Keterangan):", key="cari_riwayat")
         df_tampil = df_trans.copy()
         if cari:
@@ -350,13 +318,11 @@ elif st.session_state.menu_aktif == 'riwayat':
                 df_tampil['keterangan'].str.contains(cari, case=False, na=False)
             ]
         
-        # --- MERENDER TABEL HTML MINIMALIS ---
+        # BANGUN STRUKTUR HTML TABEL SECARA BENAR & UTUH
         html_rows = ""
         for index, row in df_tampil.iterrows():
             cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
             tgl_format = row['tanggal'].strftime('%d/%m/%Y')
-            ket_val = row['keterangan'] if row['keterangan'] else "-"
-            
             html_rows += f"""
             <tr>
                 <td>{tgl_format}</td>
@@ -387,73 +353,70 @@ elif st.session_state.menu_aktif == 'riwayat':
             </table>
         </div>
         """
+        # Render sekali saja ke Streamlit secara aman
         st.markdown(tabel_html, unsafe_allow_html=True)
         st.write("")
         
-        # --- BAGIAN KONTROL EDIT & HAPUS (MODAL INTERAKTIF DI BAWAH TABEL) ---
+        # --- PANEL PERBAIKAN DATA (EDIT & HAPUS) ---
         st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 15px 0;'>", unsafe_allow_html=True)
         st.markdown("<p style='font-size: 13px; font-weight: bold; color: #8B0000; margin-bottom: 5px;'>🔧 Panel Perbaikan Data</p>", unsafe_allow_html=True)
         
-        # Gunakan selectbox untuk memilih data mana yang mau diperbaiki berdasarkan gabungan info singkat
         opsi_pilih = {
             row['id_transaksi']: f"[{row['tanggal'].strftime('%d/%m/%Y')}] - {row['jenis']} - {row['kategori']} - Rp {row['jumlah']:,.0f}"
             for _, row in df_tampil.iterrows()
         }
         
-        id_terpilih = st.selectbox(
-            "Pilih baris data transaksi yang ingin diubah/dihapus:", 
-            options=list(opsi_pilih.keys()), 
-            format_func=lambda x: opsi_pilih[x],
-            key="pilih_id_edit"
-        )
-        
-        if id_terpilih:
-            data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
+        if opsi_pilih:
+            id_terpilih = st.selectbox(
+                "Pilih baris data transaksi yang ingin diubah/dihapus:", 
+                options=list(opsi_pilih.keys()), 
+                format_func=lambda x: opsi_pilih[x],
+                key="pilih_id_edit"
+            )
             
-            col_a1, col_a2 = st.columns([1, 1])
-            with col_a1:
+            if id_terpilih:
+                data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
                 mode_aksi = st.radio("Pilih Tindakan:", ["📝 Edit Data", "🗑️ Hapus Permanen"], horizontal=True)
-            
-            if mode_aksi == "📝 Edit Data":
-                with st.form("form_edit_riwayat"):
-                    col_e1, col_e2 = st.columns(2)
-                    with col_e1:
-                        new_tgl = st.date_input("Tanggal", data_row['tanggal'])
-                        new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(data_row['jenis']))
-                        new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
-                    with col_e2:
-                        list_kat_opsi = KAT_PEMASUKAN if new_jenis == "Pemasukan" else KAT_PENGELUARAN
-                        # Antisipasi jikalau kategori lama tidak ada di daftar opsi default
-                        if data_row['kategori'] not in list_kat_opsi:
-                            list_kat_opsi = list_kat_opsi + [data_row['kategori']]
-                        new_kat = st.selectbox("Kategori", list_kat_opsi, index=list_kat_opsi.index(data_row['kategori']))
-                        new_jml = st.number_input("Nominal (Rp)", min_value=0, value=int(data_row['jumlah']), step=1000)
-                        new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
-                    
-                    sub_edit = st.form_submit_button("Simpan Perubahan")
-                    if sub_edit:
+                
+                if mode_aksi == "📝 Edit Data":
+                    with st.form("form_edit_riwayat"):
+                        col_e1, col_e2 = st.columns(2)
+                        with col_e1:
+                            new_tgl = st.date_input("Tanggal", data_row['tanggal'])
+                            new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(data_row['jenis']))
+                            new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
+                        with col_e2:
+                            list_kat_opsi = KAT_PEMASUKAN if new_jenis == "Pemasukan" else KAT_PENGELUARAN
+                            if data_row['kategori'] not in list_kat_opsi:
+                                list_kat_opsi = list_kat_opsi + [data_row['kategori']]
+                            new_kat = st.selectbox("Kategori", list_kat_opsi, index=list_kat_opsi.index(data_row['kategori']))
+                            new_jml = st.number_input("Nominal (Rp)", min_value=0, value=int(data_row['jumlah']), step=1000)
+                            new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
+                        
+                        sub_edit = st.form_submit_button("Simpan Perubahan")
+                        if sub_edit:
+                            conn = get_connection()
+                            with conn.cursor() as cursor:
+                                cursor.execute("""
+                                    UPDATE transaksi 
+                                    SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, keterangan=%s 
+                                    WHERE id_transaksi=%s
+                                """, (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_ket, id_terpilih))
+                            conn.commit()
+                            conn.close()
+                            st.success("Transaksi berhasil diperbarui!")
+                            st.rerun()
+                            
+                elif mode_aksi == "🗑️ Hapus Permanen":
+                    st.warning("Apakah Anda yakin ingin menghapus data ini secara permanen dari database?")
+                    if st.button("🔴 Ya, Hapus Sekarang", use_container_width=True):
                         conn = get_connection()
                         with conn.cursor() as cursor:
-                            cursor.execute("""
-                                UPDATE transaksi 
-                                SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, keterangan=%s 
-                                WHERE id_transaksi=%s
-                            """, (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_ket, id_terpilih))
+                            cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
                         conn.commit()
                         conn.close()
-                        st.success("Transaksi berhasil diperbarui!")
+                        st.success("Transaksi berhasil dihapus!")
                         st.rerun()
-                        
-            elif mode_aksi == "🗑️ Hapus Permanen":
-                st.warning("Apakah Anda yakin ingin menghapus data ini secara permanen dari database?")
-                if st.button("🔴 Ya, Hapus Sekarang", use_container_width=True):
-                    conn = get_connection()
-                    with conn.cursor() as cursor:
-                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
-                    conn.commit()
-                    conn.close()
-                    st.success("Transaksi berhasil dihapus!")
-                    st.rerun()
 
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
@@ -533,14 +496,9 @@ elif st.session_state.menu_aktif == 'wallet':
                 w_name = LIST_WALLET[i + j]
                 w_bal = wallet_balances[w_name]
                 
-                if w_bal < 0:
-                    bg_color = "#8B0000"
-                    border_color = "#8B0000"
-                    text_amount_color = "#FFFFFF"
-                else:
-                    bg_color = "#000000"
-                    border_color = "#B8860B"
-                    text_amount_color = "#FFD700"
+                bg_color = "#8B0000" if w_bal < 0 else "#000000"
+                border_color = "#8B0000" if w_bal < 0 else "#B8860B"
+                text_amount_color = "#FFFFFF" if w_bal < 0 else "#FFD700"
                 
                 cols[j].markdown(f"""
                     <div style='background-color: {bg_color}; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 2px solid {border_color};'>
