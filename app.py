@@ -89,7 +89,7 @@ LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
 
-# --- APP HEADER (Lambang Uang & Lambang Link Sudah Dihilangkan) ---
+# --- APP HEADER (Tanpa Lambang Uang & Link) ---
 st.markdown("""
     <div style='text-align: center; margin-bottom: 25px;'>
         <p style='font-size: 32px; font-weight: 800; color: #8B0000; margin-bottom: 0px; line-height: 1.2;'>Informasi Keuangan Kei</p>
@@ -320,35 +320,78 @@ elif st.session_state.menu_aktif == 'riwayat':
         
         st.dataframe(df_show, use_container_width=True)
 
-# 4. MENU: REKAP
+# 4. MENU: REKAP (DIUBAH SEPERTI GAMBAR ACUAN USER)
 elif st.session_state.menu_aktif == 'rekap':
-    st.markdown("<h4 style='color: #8B0000;'>📊 Distribusi Pengeluaran</h4>", unsafe_allow_html=True)
-    df_keluar = df_trans[df_trans['jenis'] == 'Pengeluaran']
+    st.markdown("<h4 style='color: #8B0000;'>📊 Analisis Rekapitulasi</h4>", unsafe_allow_html=True)
     
-    if df_keluar.empty:
-        st.info("Data pengeluaran kosong, grafik tidak dapat dibuat.")
+    if df_trans.empty:
+        st.info("Belum ada data transaksi untuk dihitung.")
     else:
-        df_chart = df_keluar.groupby('kategori')['jumlah'].sum().reset_index()
-        tema_warna_grafik = ['#8B0000', '#B8860B', '#000000', '#555555', '#D3D3D3', '#CD5C5C']
+        # Menambahkan input rentang tanggal rekap sesuai kebutuhan analisis
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            rekap_awal = st.date_input("Mulai", df_trans['tanggal'].min(), key="rk_awal")
+        with col_r2:
+            rekap_akhir = st.date_input("Selesai", df_trans['tanggal'].max(), key="rk_akhir")
+            
+        df_rk = df_trans[(df_trans['tanggal'] >= rekap_awal) & (df_trans['tanggal'] <= rekap_akhir)]
         
-        fig = px.pie(
-            df_chart, 
-            values='jumlah', 
-            names='kategori', 
-            hole=0.4,
-            color_discrete_sequence=tema_warna_grafik
-        )
-        fig.update_traces(
-            textposition='inside', 
-            textinfo='percent+label',
-            hovertemplate='%{label}<br>Rp %{value:,.0f}<extra></extra>'
-        )
-        fig.update_layout(
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.3),
-            margin=dict(t=10, b=10, l=10, r=10)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Hitung Nilai Berdasarkan Filter Tanggal Rekap
+        rk_masuk = df_rk[df_rk['jenis'] == 'Pemasukan']['jumlah'].sum()
+        rk_keluar = df_rk[df_rk['jenis'] == 'Pengeluaran']['jumlah'].sum()
+        
+        # TAMPILAN 1: Dua Kartu Metrik Ringkasan di atas grafik (Sesuai Gambar Referensi 1)
+        col_card1, col_card2 = st.columns(2)
+        with col_card1:
+            st.markdown(f"""
+                <div style='background-color: #000000; padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #B8860B;'>
+                    <span style='font-size: 11px; color: #FFFFFF; font-weight: bold;'>Total Income Terfilter</span>
+                    <h5 style='margin: 2px 0 0 0; color: #FFD700; font-weight: 800;'>Rp {rk_masuk:,.0f}</h5>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_card2:
+            st.markdown(f"""
+                <div style='background-color: #8B0000; padding: 12px; border-radius: 8px; text-align: center;'>
+                    <span style='font-size: 11px; color: #FFFFFF; font-weight: bold;'>Total Outcome Terfilter</span>
+                    <h5 style='margin: 2px 0 0 0; color: #FFFFFF; font-weight: 800;'>Rp {rk_keluar:,.0f}</h5>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        st.write("")
+        
+        # TAMPILAN 2: Grafik Batang Horisontal (Sesuai Gambar Referensi 2)
+        df_chart_rk = df_rk[df_rk['jenis'] == 'Pengeluaran'].groupby('kategori')['jumlah'].sum().reset_index()
+        
+        if df_chart_rk.empty:
+            st.info("Tidak ada data pengeluaran dalam rentang tanggal ini.")
+        else:
+            df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=True) # Urutan dari kecil ke besar agar teratas adalah yang terbesar
+            
+            fig = px.bar(
+                df_chart_rk,
+                x='jumlah',
+                y='kategori',
+                orientation='h',
+                text='jumlah',
+                color_discrete_sequence=['#8B0000'] # Menggunakan warna identitas Merah Tua
+            )
+            
+            # Format teks angka di dalam batang grafik
+            fig.update_traces(
+                texttemplate='Rp %{text:,.0f}',
+                textposition='inside',
+                insidetextanchor='end'
+            )
+            
+            # Menghilangkan grid agar bersih dan minimalis sesuai contoh gambar
+            fig.update_layout(
+                xaxis_title="Jumlah Pengeluaran (Rp)",
+                yaxis_title="",
+                margin=dict(t=10, b=10, l=10, r=10),
+                height=350,
+                showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 # 5. MENU: WALLET
 elif st.session_state.menu_aktif == 'wallet':
