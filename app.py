@@ -88,8 +88,9 @@ init_db()
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
+ALL_KATEGORI = list(set(KAT_PENGELUARAN + KAT_PEMASUKAN))
 
-# --- APP HEADER (Tanpa Lambang Uang & Link) ---
+# --- APP HEADER ---
 st.markdown("""
     <div style='text-align: center; margin-bottom: 25px;'>
         <p style='font-size: 32px; font-weight: 800; color: #8B0000; margin-bottom: 0px; line-height: 1.2;'>Informasi Keuangan Kei</p>
@@ -299,35 +300,86 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT
+# 3. MENU: RIWAYAT (KINI MENDUKUNG EDIT & HAPUS INTERAKTIF)
 elif st.session_state.menu_aktif == 'riwayat':
-    st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat Transaksi Buku</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat & Manajemen Transaksi</h4>", unsafe_allow_html=True)
+    
     if df_trans.empty:
         st.info("Belum ada mutasi/transaksi tercatat.")
     else:
-        cari = st.text_input("🔍 Filter Pencarian (Kategori / Keterangan):")
-        df_show = df_trans.copy()
+        st.markdown("<small style='color:gray;'>💡 Double-klik pada sel untuk mengedit. Centang kolom paling kanan untuk menghapus baris.</small>", unsafe_allow_html=True)
+        
+        # Saring pencarian awal jika ada filter teks biasa
+        cari = st.text_input("🔍 Filter Pencarian Cepat (Kategori / Keterangan):")
+        df_editor = df_trans.copy()
         if cari:
-            df_show = df_show[
-                df_show['kategori'].str.contains(cari, case=False, na=False) | 
-                df_show['keterangan'].str.contains(cari, case=False, na=False)
+            df_editor = df_editor[
+                df_editor['kategori'].str.contains(cari, case=False, na=False) | 
+                df_editor['keterangan'].str.contains(cari, case=False, na=False)
             ]
         
-        df_show['tanggal'] = df_show['tanggal'].apply(lambda x: x.strftime('%d-%m-%Y'))
-        df_show['jumlah'] = df_show['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
-        df_show = df_show.drop(columns=['id_transaksi']).reset_index(drop=True)
-        df_show.index += 1
+        # Konfigurasi kolom tabel editor agar ramah pengguna (Dropdown & Batasan Input)
+        edisi_data = st.data_editor(
+            df_editor,
+            hide_index=True,
+            use_container_width=True,
+            num_rows="dynamic", # Mengizinkan penghapusan baris data lewat UI centang
+            column_config={
+                "id_transaksi": st.column_config.NumberColumn("ID", disabled=True, width="small"),
+                "jenis": st.column_config.SelectboxColumn("Jenis Aliran", options=["Pemasukan", "Pengeluaran"], required=True),
+                "tanggal": st.column_config.DateColumn("Tanggal", required=True),
+                "wallet": st.column_config.SelectboxColumn("Wallet", options=LIST_WALLET, required=True),
+                "kategori": st.column_config.SelectboxColumn("Kategori", options=ALL_KATEGORI, required=True),
+                "jumlah": st.column_config.NumberColumn("Jumlah (Rp)", min_value=0, step=1000, required=True),
+                "keterangan": st.column_config.TextColumn("Keterangan Tambahan")
+            },
+            key="transaksi_editor"
+        )
         
-        st.dataframe(df_show, use_container_width=True)
+        # Tombol aksi konfirmasi untuk memproses perubahan data langsung ke database
+        if st.button("💾 Simpan Semua Perubahan"):
+            state_perubahan = st.session_state["transaksi_editor"]
+            elemen_diedit = state_perubahan.get("edited_rows", {})
+            elemen_dihapus = state_perubahan.get("deleted_rows", [])
+            
+            if not elemen_diedit and not elemen_dihapus:
+                st.info("Tidak ada perubahan data yang terdeteksi.")
+            else:
+                conn = get_connection()
+                with conn.cursor() as cursor:
+                    # PROSES 1: PERBARUI DATA YANG DIEDIT
+                    for baris_idx, nilai_baru in elemen_diedit.items():
+                        id_tx = int(df_editor.iloc[baris_idx]["id_transaksi"])
+                        
+                        # Bangun query dinamis berdasarkan kolom apa saja yang diganti user
+                        parts = []
+                        params = []
+                        for col_name, val in nilai_baru.items():
+                            parts.append(f"{col_name} = %s")
+                            params.append(val)
+                        
+                        if parts:
+                            params.append(id_tx)
+                            query_update = f"UPDATE transaksi SET {', '.join(parts)} WHERE id_transaksi = %s"
+                            cursor.execute(query_update, params)
+                    
+                    # PROSES 2: HAPUS DATA YANG DICENTANG HAPUS
+                    for baris_idx in elemen_dihapus:
+                        id_tx = int(df_editor.iloc[baris_idx]["id_transaksi"])
+                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi = %s", (id_tx,))
+                        
+                conn.commit()
+                conn.close()
+                st.success("Perubahan data berhasil disimpan ke database!")
+                st.rerun()
 
-# 4. MENU: REKAP (DIUBAH SEPERTI GAMBAR ACUAN USER)
+# 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
     st.markdown("<h4 style='color: #8B0000;'>📊 Analisis Rekapitulasi</h4>", unsafe_allow_html=True)
     
     if df_trans.empty:
         st.info("Belum ada data transaksi untuk dihitung.")
     else:
-        # Menambahkan input rentang tanggal rekap sesuai kebutuhan analisis
         col_r1, col_r2 = st.columns(2)
         with col_r1:
             rekap_awal = st.date_input("Mulai", df_trans['tanggal'].min(), key="rk_awal")
@@ -336,11 +388,9 @@ elif st.session_state.menu_aktif == 'rekap':
             
         df_rk = df_trans[(df_trans['tanggal'] >= rekap_awal) & (df_trans['tanggal'] <= rekap_akhir)]
         
-        # Hitung Nilai Berdasarkan Filter Tanggal Rekap
         rk_masuk = df_rk[df_rk['jenis'] == 'Pemasukan']['jumlah'].sum()
         rk_keluar = df_rk[df_rk['jenis'] == 'Pengeluaran']['jumlah'].sum()
         
-        # TAMPILAN 1: Dua Kartu Metrik Ringkasan di atas grafik (Sesuai Gambar Referensi 1)
         col_card1, col_card2 = st.columns(2)
         with col_card1:
             st.markdown(f"""
@@ -359,13 +409,12 @@ elif st.session_state.menu_aktif == 'rekap':
             
         st.write("")
         
-        # TAMPILAN 2: Grafik Batang Horisontal (Sesuai Gambar Referensi 2)
         df_chart_rk = df_rk[df_rk['jenis'] == 'Pengeluaran'].groupby('kategori')['jumlah'].sum().reset_index()
         
         if df_chart_rk.empty:
             st.info("Tidak ada data pengeluaran dalam rentang tanggal ini.")
         else:
-            df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=True) # Urutan dari kecil ke besar agar teratas adalah yang terbesar
+            df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=True)
             
             fig = px.bar(
                 df_chart_rk,
@@ -373,17 +422,15 @@ elif st.session_state.menu_aktif == 'rekap':
                 y='kategori',
                 orientation='h',
                 text='jumlah',
-                color_discrete_sequence=['#8B0000'] # Menggunakan warna identitas Merah Tua
+                color_discrete_sequence=['#8B0000']
             )
             
-            # Format teks angka di dalam batang grafik
             fig.update_traces(
                 texttemplate='Rp %{text:,.0f}',
                 textposition='inside',
                 insidetextanchor='end'
             )
             
-            # Menghilangkan grid agar bersih dan minimalis sesuai contoh gambar
             fig.update_layout(
                 xaxis_title="Jumlah Pengeluaran (Rp)",
                 yaxis_title="",
