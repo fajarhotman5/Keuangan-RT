@@ -46,6 +46,41 @@ st.markdown("""
         border-radius: 10px;
         padding: 20px;
     }
+
+    /* DESAIN TABEL MINIMALIS KUSTOM (Bukan ala Excel) */
+    .table-container {
+        overflow-x: auto;
+        margin-top: 15px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: left;
+    }
+    .custom-table th {
+        background-color: transparent;
+        color: #8B0000;
+        font-weight: 700;
+        padding: 10px 8px;
+        border-bottom: 2px solid #8B0000;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+    }
+    .custom-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+    }
+    .badge-masuk {
+        color: #2e7d32;
+        font-weight: bold;
+    }
+    .badge-keluar {
+        color: #c62828;
+        font-weight: bold;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -88,7 +123,6 @@ init_db()
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
-ALL_KATEGORI = list(set(KAT_PENGELUARAN + KAT_PEMASUKAN))
 
 # --- APP HEADER ---
 st.markdown("""
@@ -119,7 +153,7 @@ else:
     total_keluar = 0
     wallet_balances = {w: 0 for w in LIST_WALLET}
 
-# --- BARIS PERTAMA: KARTU METRIK KONTRAST TINGGI ---
+# --- BARIS PERTAMA: KARTU METRIK ---
 col_s1, col_s2 = st.columns(2)
 with col_s1:
     st.markdown(f"""
@@ -300,78 +334,126 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT (KINI MENDUKUNG EDIT & HAPUS INTERAKTIF)
+# 3. MENU: RIWAYAT (TABEL MINIMALIS KUSTOM DENGAN FITUR EDIT & HAPUS)
 elif st.session_state.menu_aktif == 'riwayat':
-    st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat & Manajemen Transaksi</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat Buku Kas</h4>", unsafe_allow_html=True)
     
     if df_trans.empty:
         st.info("Belum ada mutasi/transaksi tercatat.")
     else:
-        st.markdown("<small style='color:gray;'>💡 Double-klik pada sel untuk mengedit. Centang kolom paling kanan untuk menghapus baris.</small>", unsafe_allow_html=True)
-        
-        # Saring pencarian awal jika ada filter teks biasa
-        cari = st.text_input("🔍 Filter Pencarian Cepat (Kategori / Keterangan):")
-        df_editor = df_trans.copy()
+        # Filter Pencarian Cepat
+        cari = st.text_input("🔍 Filter Pencarian Cepat (Kategori / Keterangan):", key="cari_riwayat")
+        df_tampil = df_trans.copy()
         if cari:
-            df_editor = df_editor[
-                df_editor['kategori'].str.contains(cari, case=False, na=False) | 
-                df_editor['keterangan'].str.contains(cari, case=False, na=False)
+            df_tampil = df_tampil[
+                df_tampil['kategori'].str.contains(cari, case=False, na=False) | 
+                df_tampil['keterangan'].str.contains(cari, case=False, na=False)
             ]
         
-        # Konfigurasi kolom tabel editor agar ramah pengguna (Dropdown & Batasan Input)
-        edisi_data = st.data_editor(
-            df_editor,
-            hide_index=True,
-            use_container_width=True,
-            num_rows="dynamic", # Mengizinkan penghapusan baris data lewat UI centang
-            column_config={
-                "id_transaksi": st.column_config.NumberColumn("ID", disabled=True, width="small"),
-                "jenis": st.column_config.SelectboxColumn("Jenis Aliran", options=["Pemasukan", "Pengeluaran"], required=True),
-                "tanggal": st.column_config.DateColumn("Tanggal", required=True),
-                "wallet": st.column_config.SelectboxColumn("Wallet", options=LIST_WALLET, required=True),
-                "kategori": st.column_config.SelectboxColumn("Kategori", options=ALL_KATEGORI, required=True),
-                "jumlah": st.column_config.NumberColumn("Jumlah (Rp)", min_value=0, step=1000, required=True),
-                "keterangan": st.column_config.TextColumn("Keterangan Tambahan")
-            },
-            key="transaksi_editor"
+        # --- MERENDER TABEL HTML MINIMALIS ---
+        html_rows = ""
+        for index, row in df_tampil.iterrows():
+            cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
+            tgl_format = row['tanggal'].strftime('%d/%m/%Y')
+            ket_val = row['keterangan'] if row['keterangan'] else "-"
+            
+            html_rows += f"""
+            <tr>
+                <td>{tgl_format}</td>
+                <td><span class="{cls_jenis}">{row['jenis']}</span></td>
+                <td>{row['wallet']}</td>
+                <td>{row['kategori']}</td>
+                <td><b>Rp {row['jumlah']:,.0f}</b></td>
+                <td>{row['keterangan'] if row['keterangan'] else '-'}</td>
+            </tr>
+            """
+            
+        tabel_html = f"""
+        <div class="table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Aliran</th>
+                        <th>Wallet</th>
+                        <th>Kategori</th>
+                        <th>Nominal</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {html_rows}
+                </tbody>
+            </table>
+        </div>
+        """
+        st.markdown(tabel_html, unsafe_allow_html=True)
+        st.write("")
+        
+        # --- BAGIAN KONTROL EDIT & HAPUS (MODAL INTERAKTIF DI BAWAH TABEL) ---
+        st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 15px 0;'>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 13px; font-weight: bold; color: #8B0000; margin-bottom: 5px;'>🔧 Panel Perbaikan Data</p>", unsafe_allow_html=True)
+        
+        # Gunakan selectbox untuk memilih data mana yang mau diperbaiki berdasarkan gabungan info singkat
+        opsi_pilih = {
+            row['id_transaksi']: f"[{row['tanggal'].strftime('%d/%m/%Y')}] - {row['jenis']} - {row['kategori']} - Rp {row['jumlah']:,.0f}"
+            for _, row in df_tampil.iterrows()
+        }
+        
+        id_terpilih = st.selectbox(
+            "Pilih baris data transaksi yang ingin diubah/dihapus:", 
+            options=list(opsi_pilih.keys()), 
+            format_func=lambda x: opsi_pilih[x],
+            key="pilih_id_edit"
         )
         
-        # Tombol aksi konfirmasi untuk memproses perubahan data langsung ke database
-        if st.button("💾 Simpan Semua Perubahan"):
-            state_perubahan = st.session_state["transaksi_editor"]
-            elemen_diedit = state_perubahan.get("edited_rows", {})
-            elemen_dihapus = state_perubahan.get("deleted_rows", [])
+        if id_terpilih:
+            data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
             
-            if not elemen_diedit and not elemen_dihapus:
-                st.info("Tidak ada perubahan data yang terdeteksi.")
-            else:
-                conn = get_connection()
-                with conn.cursor() as cursor:
-                    # PROSES 1: PERBARUI DATA YANG DIEDIT
-                    for baris_idx, nilai_baru in elemen_diedit.items():
-                        id_tx = int(df_editor.iloc[baris_idx]["id_transaksi"])
-                        
-                        # Bangun query dinamis berdasarkan kolom apa saja yang diganti user
-                        parts = []
-                        params = []
-                        for col_name, val in nilai_baru.items():
-                            parts.append(f"{col_name} = %s")
-                            params.append(val)
-                        
-                        if parts:
-                            params.append(id_tx)
-                            query_update = f"UPDATE transaksi SET {', '.join(parts)} WHERE id_transaksi = %s"
-                            cursor.execute(query_update, params)
+            col_a1, col_a2 = st.columns([1, 1])
+            with col_a1:
+                mode_aksi = st.radio("Pilih Tindakan:", ["📝 Edit Data", "🗑️ Hapus Permanen"], horizontal=True)
+            
+            if mode_aksi == "📝 Edit Data":
+                with st.form("form_edit_riwayat"):
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        new_tgl = st.date_input("Tanggal", data_row['tanggal'])
+                        new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(data_row['jenis']))
+                        new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
+                    with col_e2:
+                        list_kat_opsi = KAT_PEMASUKAN if new_jenis == "Pemasukan" else KAT_PENGELUARAN
+                        # Antisipasi jikalau kategori lama tidak ada di daftar opsi default
+                        if data_row['kategori'] not in list_kat_opsi:
+                            list_kat_opsi = list_kat_opsi + [data_row['kategori']]
+                        new_kat = st.selectbox("Kategori", list_kat_opsi, index=list_kat_opsi.index(data_row['kategori']))
+                        new_jml = st.number_input("Nominal (Rp)", min_value=0, value=int(data_row['jumlah']), step=1000)
+                        new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
                     
-                    # PROSES 2: HAPUS DATA YANG DICENTANG HAPUS
-                    for baris_idx in elemen_dihapus:
-                        id_tx = int(df_editor.iloc[baris_idx]["id_transaksi"])
-                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi = %s", (id_tx,))
+                    sub_edit = st.form_submit_button("Simpan Perubahan")
+                    if sub_edit:
+                        conn = get_connection()
+                        with conn.cursor() as cursor:
+                            cursor.execute("""
+                                UPDATE transaksi 
+                                SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, keterangan=%s 
+                                WHERE id_transaksi=%s
+                            """, (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_ket, id_terpilih))
+                        conn.commit()
+                        conn.close()
+                        st.success("Transaksi berhasil diperbarui!")
+                        st.rerun()
                         
-                conn.commit()
-                conn.close()
-                st.success("Perubahan data berhasil disimpan ke database!")
-                st.rerun()
+            elif mode_aksi == "🗑️ Hapus Permanen":
+                st.warning("Apakah Anda yakin ingin menghapus data ini secara permanen dari database?")
+                if st.button("🔴 Ya, Hapus Sekarang", use_container_width=True):
+                    conn = get_connection()
+                    with conn.cursor() as cursor:
+                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
+                    conn.commit()
+                    conn.close()
+                    st.success("Transaksi berhasil dihapus!")
+                    st.rerun()
 
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
