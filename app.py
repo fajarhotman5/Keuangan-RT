@@ -101,7 +101,7 @@ if 'hapus_id' not in st.session_state:
     st.session_state.hapus_id = None
 
 # --- FORM INPUT ---
-st.markdown("<p style='font-size:16px; font-weight:600;'>✍️ Input Pengeluaran Baru Disini!</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:16px; font-weight:600;'>✍️Input Pengeluaran</p>", unsafe_allow_html=True)
 with st.form("form_pengeluaran", clear_on_submit=True):
     tanggal = st.date_input("Tanggal", datetime.now(), format="DD/MM/YYYY")
     kategori_terpilih = st.selectbox("Kategori", list(opsi_kategori.keys()))
