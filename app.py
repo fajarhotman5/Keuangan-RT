@@ -293,7 +293,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')])
                 ]))
                 story.append(t)
-                doc.build(story, canvasmaker=canvas.Canvas) # Perbaikan pemanggilan canvas standard bawaan reportlab
+                doc.build(story, canvasmaker=canvas.Canvas)
                 
                 st.download_button(
                     label="🔴 Unduh File PDF",
@@ -303,7 +303,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT (TABEL BERSIH TANPA BOCOR)
+# 3. MENU: RIWAYAT (SUDAH DIPERBAIKI - BERSIH DARI BOCORAN TEKS)
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat Buku Kas</h4>", unsafe_allow_html=True)
     
@@ -318,11 +318,12 @@ elif st.session_state.menu_aktif == 'riwayat':
                 df_tampil['keterangan'].str.contains(cari, case=False, na=False)
             ]
         
-        # BANGUN STRUKTUR HTML TABEL SECARA BENAR & UTUH
+        # BANGUN STRUKTUR HTML TABEL SECARA BERSIH
         html_rows = ""
         for index, row in df_tampil.iterrows():
             cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
             tgl_format = row['tanggal'].strftime('%d/%m/%Y')
+            
             html_rows += f"""
             <tr>
                 <td>{tgl_format}</td>
@@ -353,7 +354,7 @@ elif st.session_state.menu_aktif == 'riwayat':
             </table>
         </div>
         """
-        # Render sekali saja ke Streamlit secara aman
+        # HANYA RENDER DI SINI (st.write yang salah panggil sudah dihapus total)
         st.markdown(tabel_html, unsafe_allow_html=True)
         st.write("")
         
