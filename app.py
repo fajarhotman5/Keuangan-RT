@@ -89,10 +89,10 @@ LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
 
-# --- APP HEADER (Hitam Pekat & Kuning Gelap/Emas) ---
+# --- APP HEADER (Lambang Uang & Lambang Link Sudah Dihilangkan) ---
 st.markdown("""
     <div style='text-align: center; margin-bottom: 25px;'>
-        <h1 style='font-size: 28px; font-weight: 800; color: #8B0000; margin-bottom: 0px;'>💰 Informasi Keuangan Kei</h1>
+        <p style='font-size: 32px; font-weight: 800; color: #8B0000; margin-bottom: 0px; line-height: 1.2;'>Informasi Keuangan Kei</p>
         <p style='color: #B8860B; font-size: 14px; font-style: italic; font-weight: bold; margin-top: 5px;'>Harus catat setiap saat</p>
     </div>
 """, unsafe_allow_html=True)
@@ -121,7 +121,6 @@ else:
 # --- BARIS PERTAMA: KARTU METRIK KONTRAST TINGGI ---
 col_s1, col_s2 = st.columns(2)
 with col_s1:
-    # Sisa Saldo: Latar belakang Hitam Pekat, Teks Putih Bersih & Kuning Gelap
     st.markdown(f"""
         <div style='background-color: #000000; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #B8860B;'>
             <p style='margin: 0; font-size: 14px; color: #FFFFFF !important; font-weight: bold;'>Sisa Saldo Berjalan</p>
@@ -129,7 +128,6 @@ with col_s1:
         </div>
     """, unsafe_allow_html=True)
 with col_s2:
-    # Total Pengeluaran: Latar belakang Merah Tua, Teks Putih Bersih
     st.markdown(f"""
         <div style='background-color: #8B0000; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #8B0000;'>
             <p style='margin: 0; font-size: 14px; color: #FFFFFF !important; font-weight: bold;'>Total Pengeluaran</p>
@@ -244,7 +242,6 @@ elif st.session_state.menu_aktif == 'unduh':
                 with pd.ExcelWriter(buffer_xl, engine='openpyxl') as writer:
                     df_filter.to_excel(writer, index=False, sheet_name='Laporan')
                 
-                # Modifikasi tombol khusus download excel (Warna Hijau bawaan Anda tetap dipertahankan)
                 st.download_button(
                     label="🟢 Unduh File Excel",
                     data=buffer_xl.getvalue(),
@@ -321,10 +318,9 @@ elif st.session_state.menu_aktif == 'riwayat':
         df_show = df_show.drop(columns=['id_transaksi']).reset_index(drop=True)
         df_show.index += 1
         
-        # Penggunaan dataframe bawaan streamlit adaptif terhadap dark/light mode otomatis
         st.dataframe(df_show, use_container_width=True)
 
-# 4. MENU: REKAP (Grafik Lingkaran Bertema Merah, Kuning Gelap & Hitam)
+# 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
     st.markdown("<h4 style='color: #8B0000;'>📊 Distribusi Pengeluaran</h4>", unsafe_allow_html=True)
     df_keluar = df_trans[df_trans['jenis'] == 'Pengeluaran']
@@ -333,8 +329,6 @@ elif st.session_state.menu_aktif == 'rekap':
         st.info("Data pengeluaran kosong, grafik tidak dapat dibuat.")
     else:
         df_chart = df_keluar.groupby('kategori')['jumlah'].sum().reset_index()
-        
-        # Palet warna Pie Chart disesuaikan: Merah Tua, Kuning Gelap/Emas, Hitam Pekat, Abu-abu tua
         tema_warna_grafik = ['#8B0000', '#B8860B', '#000000', '#555555', '#D3D3D3', '#CD5C5C']
         
         fig = px.pie(
@@ -367,8 +361,6 @@ elif st.session_state.menu_aktif == 'wallet':
                 w_name = LIST_WALLET[i + j]
                 w_bal = wallet_balances[w_name]
                 
-                # JIKA MINUS: Merah Tua (Teks Putih Bersih)
-                # JIKA AMAN: Hitam Pekat dengan Bingkai & Angka Kuning Emas (Sangat Kontras)
                 if w_bal < 0:
                     bg_color = "#8B0000"
                     border_color = "#8B0000"
