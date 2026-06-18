@@ -331,7 +331,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT
+# 3. MENU: RIWAYAT (RESPONSIF & BEBAS BOCOR HTML)
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat Buku Kas</h4>", unsafe_allow_html=True)
     
@@ -346,44 +346,42 @@ elif st.session_state.menu_aktif == 'riwayat':
                 df_tampil['keterangan'].str.contains(cari, case=False, na=False)
             ]
         
-        # BANGUN STRUKTUR HTML TABEL SECARA BERSIH
+        # JANGAN BERI SPASI/TAB DI AWAL BARIS STRING HTML AGAR TIDAK TERBACA SEBAGAI CODE BLOCK
         html_rows = ""
         for index, row in df_tampil.iterrows():
             cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
             tgl_format = row['tanggal'].strftime('%d/%m/%Y')
+            keterangan_isi = row['keterangan'] if row['keterangan'] else '-'
             
-            html_rows += f"""
-            <tr>
-                <td>{tgl_format}</td>
-                <td><span class="{cls_jenis}">{row['jenis']}</span></td>
-                <td>{row['wallet']}</td>
-                <td>{row['kategori']}</td>
-                <td><b>Rp {row['jumlah']:,.0f}</b></td>
-                <td>{row['keterangan'] if row['keterangan'] else '-'}</td>
-            </tr>
-            """
+            # Penggabungan string rapat tanpa indentasi spasi di awal baris
+            html_rows += f"<tr>" \
+                         f"<td>{tgl_format}</td>" \
+                         f"<td><span class='{cls_jenis}'>{row['jenis']}</span></td>" \
+                         f"<td>{row['wallet']}</td>" \
+                         f"<td>{row['kategori']}</td>" \
+                         f"<td><b>Rp {row['jumlah']:,.0f}</b></td>" \
+                         f"<td>{keterangan_isi}</td>" \
+                         f"</tr>"
             
-        tabel_html = f"""
-        <div class="table-container">
-            <table class="custom-table">
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th>Aliran</th>
-                        <th>Wallet</th>
-                        <th>Kategori</th>
-                        <th>Nominal</th>
-                        <th>Keterangan</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {html_rows}
-                </tbody>
-            </table>
-        </div>
-        """
-        # HANYA RENDER MENGGUNAKAN MARKDOWN SEPERTI DI BAWAH INI
-        # JANGAN ADA st.write(html_rows) DI ATAS ATAU DI BAWAH BARIS INI!
+        tabel_html = f"<div class='table-container'>" \
+                     f"<table class='custom-table'>" \
+                     f"<thead>" \
+                     f"<tr>" \
+                     f"<th>Tanggal</th>" \
+                     f"<th>Aliran</th>" \
+                     f"<th>Wallet</th>" \
+                     f"<th>Kategori</th>" \
+                     f"<th>Nominal</th>" \
+                     f"<th>Keterangan</th>" \
+                     f"</tr>" \
+                     f"</thead>" \
+                     f"<tbody>" \
+                     f"{html_rows}" \
+                     f"</tbody>" \
+                     f"</table>" \
+                     f"</div>"
+                     
+        # Render langsung ke layar secara aman
         st.markdown(tabel_html, unsafe_allow_html=True)
         st.write("")
         
