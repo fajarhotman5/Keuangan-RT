@@ -283,50 +283,89 @@ elif st.session_state.menu_aktif == 'unduh':
                 )
             with col_b2:
                 buffer_pdf = io.BytesIO()
-                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=35, bottomMargin=35)
+                # Mengatur margin agar lebih seimbang dan luas
+                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=40, bottomMargin=40)
                 story = []
                 
                 styles = getSampleStyleSheet()
-                title_style = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=15, textColor=colors.HexColor('#8B0000'), spaceAfter=2)
+                
+                # JADIKAN JUDUL UTAMA RATA TENGAH (alignment=1)
+                title_style = ParagraphStyle(
+                    name='TitleStyle', 
+                    fontName='Helvetica-Bold', 
+                    fontSize=16, 
+                    textColor=colors.HexColor('#8B0000'), 
+                    alignment=1, # 1 artinya Center / Tengah
+                    spaceAfter=4
+                )
+                
                 meta_style = ParagraphStyle(name='MetaStyle', fontName='Helvetica-Oblique', fontSize=8, textColor=colors.HexColor('#666666'), alignment=2)
-                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=9, textColor=colors.HexColor('#333333'), spaceAfter=15)
                 
-                header_style = ParagraphStyle(name='HeaderStyle', fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, leading=10)
-                cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#222222'))
+                # Sub-title periode dibuat rata tengah juga agar sinkron
+                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=9, textColor=colors.HexColor('#444444'), alignment=1, spaceAfter=20)
+                
+                # STYLING JUDUL TABEL (DIUBAH JADI RATA TENGAH -> alignment=1)
+                header_style = ParagraphStyle(name='HeaderStyle', fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, leading=10, alignment=1)
+                
+                # Styling isi cell tabel biar lebih bersih
+                cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#333333'))
                 cell_style_bold = ParagraphStyle(name='CellStyleBold', fontName='Helvetica-Bold', fontSize=8, leading=11, textColor=colors.HexColor('#222222'))
+                cell_center = ParagraphStyle(name='CellCenter', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#333333'), alignment=1)
                 
+                # Metadata cetak di bagian pojok kanan atas
                 story.append(Paragraph(f"Waktu Cetak: {waktu_cetak}", meta_style))
+                story.append(Spacer(1, 10))
+                
+                # Judul Utama sekarang otomatis di tengah
                 story.append(Paragraph("LAPORAN MUTASI KEUANGAN KEI", title_style))
                 story.append(Paragraph(f"Periode Laporan: {tgl_awal.strftime('%d-%m-%Y')} s/d {tgl_akhir.strftime('%d-%m-%Y')}", sub_style))
                 
+                # Header Tabel
                 table_data = [[
-                    Paragraph("TANGGAL", header_style), Paragraph("ALIRAN", header_style), Paragraph("WALLET", header_style), 
-                    Paragraph("KATEGORI", header_style), Paragraph("NOMINAL", header_style), Paragraph("REIMBURSE", header_style), 
+                    Paragraph("TANGGAL", header_style), 
+                    Paragraph("ALIRAN", header_style), 
+                    Paragraph("WALLET", header_style), 
+                    Paragraph("KATEGORI", header_style), 
+                    Paragraph("NOMINAL", header_style), 
+                    Paragraph("REIMBURSE", header_style), 
                     Paragraph("KETERANGAN", header_style)
                 ]]
                 
+                # Memasukkan data transaksi ke tabel PDF
                 for _, row in df_filter.iterrows():
                     txt_jenis = "Masuk" if row['jenis'] == "Pemasukan" else "Keluar"
                     tgl_str = row['tanggal'].strftime('%d-%m-%Y')
                     
+                    # Beri warna teks khusus pada nominal kas masuk/keluar di PDF agar atraktif
+                    color_nominal = colors.HexColor('#2E7D32') if row['jenis'] == "Pemasukan" else colors.HexColor('#C62828')
+                    cell_nominal_style = ParagraphStyle(name='CellNominal', fontName='Helvetica-Bold', fontSize=8, leading=11, textColor=color_nominal)
+                    
                     table_data.append([
-                        Paragraph(tgl_str, cell_style),
-                        Paragraph(txt_jenis, cell_style),
+                        Paragraph(tgl_str, cell_center),       # Tanggal rata tengah
+                        Paragraph(txt_jenis, cell_center),     # Jenis aliran rata tengah
                         Paragraph(str(row['wallet']), cell_style),
                         Paragraph(str(row['kategori']), cell_style),
-                        Paragraph(f"Rp {row['jumlah']:,.0f}", cell_style_bold),
-                        Paragraph(str(row.get('reimburse', 'Tidak')), cell_style),
+                        Paragraph(f"Rp {row['jumlah']:,.0f}", cell_nominal_style),
+                        Paragraph(str(row.get('reimburse', 'Tidak')), cell_center), # Reimburse rata tengah
                         Paragraph(str(row['keterangan'] or '-'), cell_style)
                     ])
                 
-                col_widths = [62, 48, 65, 95, 75, 60, 147]
+                # Mengatur lebar kolom agar pas dengan kertas (Total lebar = 540)
+                col_widths = [60, 45, 65, 95, 75, 60, 140]
                 t = Table(table_data, colWidths=col_widths, repeatRows=1)
+                
+                # DESAIN TABEL PREMIUM & MINIMALIS MODERN
                 t.setStyle(TableStyle([
-                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')), # Warna merah maroon premium untuk header
                     ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
-                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#FAFAFA')]),
-                    ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 6)
+                    ('ALIGN', (0,0), (-1,0), 'CENTER'),                       # Pastikan posisi cell header absolut di tengah
+                    ('LINEBELOW', (0,0), (-1,0), 1.5, colors.HexColor('#5A0000')), # Garis pembatas tebal di bawah header
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),  # Grid tipis abu-abu bersih (tidak kaku)
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]), # Warna selang-seling baris yang soft
+                    ('TOPPADDING', (0,0), (-1,-1), 7),                         # Padding atas-bawah diperlonggar sedikit agar krispi
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 7),
+                    ('LEFTPADDING', (0,0), (-1,-1), 5),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 5),
                 ]))
                 story.append(t)
                 doc.build(story, canvasmaker=canvas.Canvas)
