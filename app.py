@@ -453,7 +453,7 @@ elif st.session_state.menu_aktif == 'rekap':
                 fig.update_traces(text=None)
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-# 5. MENU: WALLET
+# 5. MENU: WALLET (RAPAT KIRI - ANTI MARKDOWN CODE BLOCKS)
 elif st.session_state.menu_aktif == 'wallet':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 8px;'>💳 Sisa Saldo per Wallet</p>", unsafe_allow_html=True)
     
@@ -470,11 +470,8 @@ elif st.session_state.menu_aktif == 'wallet':
             bg_c = "rgba(184, 134, 11, 0.08)"
             text_c = "inherit"
             
-        wallet_html += f"""
-        <div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'>
-            <span style='font-weight: bold; color: {border_c};'>{w_name}:</span> 
-            <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span>
-        </div>
-        """
+        # PENTING: String ini wajib rapat kiri agar tidak memicu deteksi Markdown otomatis
+        wallet_html += f"""<div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'><span style='font-weight: bold; color: {border_c};'>{w_name}:</span> <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span></div>"""
+        
     wallet_html += "</div>"
     st.markdown(wallet_html, unsafe_allow_html=True)
