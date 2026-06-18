@@ -491,80 +491,88 @@ elif st.session_state.menu_aktif == 'riwayat':
                         conn.commit(); conn.close()
                         st.success("Transaksi berhasil dihapus!"); st.rerun()
 
-# 4. MENU: REKAP (BREAKDOWN TOTAL DETAIL DENGAN TABS BERSIH)
+# 4. MENU: REKAP (SUPER MINIMALIS & COMPACT KHUSUS LAYAR HP)
 elif st.session_state.menu_aktif == 'rekap':
-    st.markdown("<h4 style='color: #8B0000;'>📊 Analisis & Rekapitulasi Global</h4>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #8B0000; font-weight: bold; margin-bottom: 5px; font-size: 15px;'>📊 Rekap Ringkas Data</p>", unsafe_allow_html=True)
+    
     if df_trans.empty:
-        st.info("Belum ada data transaksi untuk dihitung.")
+        st.info("Belum ada data transaksi.")
     else:
+        # Input tanggal dibuat sebaris dan tipis
         col_r1, col_r2 = st.columns(2)
-        with col_r1: rekap_awal = st.date_input("Mulai", df_trans['tanggal'].min(), key="rk_awal")
-        with col_r2: rekap_akhir = st.date_input("Selesai", df_trans['tanggal'].max(), key="rk_akhir")
+        with col_r1: rekap_awal = st.date_input("Dari", df_trans['tanggal'].min(), key="rk_awal")
+        with col_r2: rekap_akhir = st.date_input("Sampai", df_trans['tanggal'].max(), key="rk_akhir")
             
         df_rk = df_trans[(df_trans['tanggal'] >= rekap_awal) & (df_trans['tanggal'] <= rekap_akhir)].copy()
         
         if df_rk.empty:
-            st.warning("Tidak ada transaksi pada periode tanggal ini.")
+            st.warning("Data kosong pada periode ini.")
         else:
             rk_masuk = df_rk[df_rk['jenis'] == 'Pemasukan']['jumlah'].sum()
             rk_keluar = df_rk[df_rk['jenis'] == 'Pengeluaran']['jumlah'].sum()
             
-            col_card1, col_card2 = st.columns(2)
-            with col_card1:
-                st.markdown(f"<div class='metric-card' style='background-color: #000000; padding: 12px; border-radius: 8px; text-align: center; border: 2px solid #B8860B; margin-bottom: 10px;'><span style='font-size: 12px; color: #FFFFFF; font-weight: bold;'>Total Income Terfilter</span><h5 style='margin: 2px 0 0 0; color: #FFD700; font-weight: 800; font-size: 18px;'>Rp {rk_masuk:,.0f}</h5></div>", unsafe_allow_html=True)
-            with col_card2:
-                st.markdown(f"<div class='metric-card' style='background-color: #8B0000; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='font-size: 12px; color: #FFFFFF; font-weight: bold;'>Total Outcome Terfilter</span><h5 style='margin: 2px 0 0 0; color: #FFFFFF; font-weight: 800; font-size: 18px;'>Rp {rk_keluar:,.0f}</h5></div>", unsafe_allow_html=True)
+            # 1. Total Ringkas (Satu baris teks kecil tebal, tanpa box raksasa)
+            st.markdown(f"""
+                <div style='padding: 5px 0; font-size: 13px; border-bottom: 1px solid #EEE; margin-bottom: 10px;'>
+                    🟢 <b>Masuk:</b> <span style='color:#2e7d32;'>Rp {rk_masuk:,.0f}</span> | 
+                    🔴 <b>Keluar:</b> <span style='color:#c62828;'>Rp {rk_keluar:,.0f}</span>
+                </div>
+            """, unsafe_allow_html=True)
                 
-            # TABS UNTUK MENAMPILKAN RANGKUMAN SEGMENTASI
-            st.markdown("<p style='font-size: 14px; font-weight: bold; color: #8B0000; margin-top: 15px; margin-bottom: 5px;'>🔍 Rincian Distribusi Dana</p>", unsafe_allow_html=True)
-            tab_wlt, tab_kat, tab_rmb = st.tabs(["💳 Total Per Wallet", "🗂️ Total Per Kategori", "🔄 Dana Reimburse"])
+            # 2. Breakdown Data Menggunakan Teks List Tipis (Sangat Ringan di HP)
+            tab_wlt, tab_kat, tab_rmb = st.tabs(["💳 Wallet", "🗂️ Kategori", "🔄 Reimburse"])
             
             with tab_wlt:
                 df_wlt = df_rk.groupby(['wallet', 'jenis'])['jumlah'].sum().unstack(fill_value=0).reset_index()
                 for _, r in df_wlt.iterrows():
-                    p_masuk = r.get('Pemasukan', 0)
-                    p_keluar = r.get('Pengeluaran', 0)
-                    st.markdown(f"""
-                        <div style='background-color:rgba(139,0,0,0.05); border-left:4px solid #B8860B; padding:8px 12px; border-radius:4px; margin-bottom:8px;'>
-                            <span style='font-weight:bold; color:#000;'>{r['wallet']}</span><br/>
-                            <span style='font-size:12px; color:#2e7d32;'>Masuk: Rp {p_masuk:,.0f}</span> | <span style='font-size:12px; color:#c62828;'>Keluar: Rp {p_keluar:,.0f}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    pm = r.get('Pemasukan', 0)
+                    pk = r.get('Pengeluaran', 0)
+                    st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>{r['wallet']}</b>: <span style='color:#2e7d32;'>+{pm:,.0f}</span> | <span style='color:#c62828;'>-{pk:,.0f}</span></p>", unsafe_allow_html=True)
                     
             with tab_kat:
                 df_kat = df_rk.groupby(['kategori', 'jenis'])['jumlah'].sum().reset_index()
                 for _, r in df_kat.sort_values(by='jumlah', ascending=False).iterrows():
                     warna_k = "#2e7d32" if r['jenis'] == 'Pemasukan' else "#c62828"
-                    lbl_jns = "In" if r['jenis'] == 'Pemasukan' else "Out"
-                    st.markdown(f"""
-                        <div style='background-color:white; border:1px solid #E0E0E0; padding:6px 12px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between;'>
-                            <span><b>{r['kategori']}</b> <small style='color:#777;'>({lbl_jns})</small></span>
-                            <span style='color:{warna_k}; font-weight:bold;'>Rp {r['jumlah']:,.0f}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    lbl = "In" if r['jenis'] == 'Pemasukan' else "Out"
+                    st.markdown(f"<p style='margin:0; font-size:12px;'>• [{lbl}] {r['kategori']}: <span style='color:{warna_k}; font-weight:bold;'>Rp {r['jumlah']:,.0f}</span></p>", unsafe_allow_html=True)
                     
             with tab_rmb:
                 df_rmb = df_rk[df_rk['jenis'] == 'Pengeluaran'].groupby('reimburse')['jumlah'].sum().reset_index()
-                total_ya = df_rmb[df_rmb['reimburse'] == 'Ya']['jumlah'].sum()
-                total_tidak = df_rmb[df_rmb['reimburse'] == 'Tidak']['jumlah'].sum()
-                
-                col_rmb1, col_rmb2 = st.columns(2)
-                with col_rmb1:
-                    st.markdown(f"<div style='background-color:#FFF5F5; border:1px solid #c62828; padding:10px; border-radius:6px; text-align:center;'><span style='font-size:11px; color:#c62828; font-weight:bold;'>Klaim Reimburse (Ya)</span><h6 style='margin:3px 0 0 0; color:#c62828; font-size:15px;'>Rp {total_ya:,.0f}</h6></div>", unsafe_allow_html=True)
-                with col_rmb2:
-                    st.markdown(f"<div style='background-color:#F9F9F9; border:1px solid #CCC; padding:10px; border-radius:6px; text-align:center;'><span style='font-size:11px; color:#555; font-weight:bold;'>Pribadi (Tidak)</span><h6 style='margin:3px 0 0 0; color:#444; font-size:15px;'>Rp {total_tidak:,.0f}</h6></div>", unsafe_allow_html=True)
+                t_ya = df_rmb[df_rmb['reimburse'] == 'Ya']['jumlah'].sum()
+                t_tidak = df_rmb[df_rmb['reimburse'] == 'Tidak']['jumlah'].sum()
+                st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>Reimburse (Ya):</b> <span style='color:#c62828; font-weight:bold;'>Rp {t_ya:,.0f}</span></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>Pribadi (Tidak):</b> Rp {t_tidak:,.0f}</p>", unsafe_allow_html=True)
 
-            # GRAFIK BATANG DI BAGIAN PALING BAWAH
-            st.markdown("<p style='font-size: 14px; font-weight: bold; color: #8B0000; margin-top: 15px; margin-bottom: 5px;'>📉 Grafik Pengeluaran Kategori</p>", unsafe_allow_html=True)
+            # 3. Grafik Dibuat Sangat Ceper, Pendek, Tanpa Embel-Embel Angka yang Tumpang Tindih
+            st.markdown("<p style='font-size: 12px; font-weight: bold; color: #8B0000; margin-top: 15px; margin-bottom: 2px;'>📉 Tren Pengeluaran</p>", unsafe_allow_html=True)
             df_chart_rk = df_rk[df_rk['jenis'] == 'Pengeluaran'].groupby('kategori')['jumlah'].sum().reset_index()
+            
             if df_chart_rk.empty:
-                st.info("Tidak ada data pengeluaran untuk dibuat grafik.")
+                st.caption("Tidak ada grafik pengeluaran.")
             else:
                 df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=True)
-                fig = px.bar(df_chart_rk, x='jumlah', y='kategori', orientation='h', text='jumlah', color_discrete_sequence=['#8B0000'])
-                fig.update_traces(texttemplate='Rp %{text:,.0f}', textposition='inside', insidetextanchor='end')
-                fig.update_layout(xaxis_title="Jumlah Pengeluaran (Rp)", yaxis_title="", margin=dict(t=10, b=10, l=10, r=10), height=300, showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
+                
+                fig = px.bar(
+                    df_chart_rk, 
+                    x='jumlah', 
+                    y='kategori', 
+                    orientation='h',
+                    color_discrete_sequence=['#8B0000']
+                )
+                
+                # Pengaturan khusus agar grafik tidak memakan tempat di HP
+                fig.update_layout(
+                    xaxis_title=None, 
+                    yaxis_title=None, 
+                    margin=dict(t=5, b=5, l=5, r=5), 
+                    height=180, # Tinggi grafik dipangkas drastis menjadi super pendek
+                    showlegend=False,
+                    font=dict(size=10), # Font grafik dikecilkan jadi 10px
+                    xaxis=dict(showticklabels=True) # Hanya memunculkan angka di sumbu bawah agar bersih
+                )
+                fig.update_traces(text=None) # Hilangkan teks angka di dalam batang biar tidak tabrakan
+                
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 # 5. MENU: WALLET
 elif st.session_state.menu_aktif == 'wallet':
