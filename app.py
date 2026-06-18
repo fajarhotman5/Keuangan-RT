@@ -336,83 +336,22 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT (DUAL LAYOUT: SEMPURNA DI LAPTOP, KRISPI DI HP)
+# 3. MENU: RIWAYAT (AKSI CEPAT DI ATAS - SEMPURNA DI LAPTOP & HP)
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 5px;'>📋 Riwayat Buku Kas</p>", unsafe_allow_html=True)
     if df_trans.empty:
         st.info("Belum ada mutasi transaksi.")
     else:
+        # 1. KOLOM PENCARIAN (TETAP DI ATAS)
         cari = st.text_input("🔍 Cari Kategori / Keterangan:", key="cari_riwayat")
         df_tampil = df_trans.copy()
         if cari:
             df_tampil = df_tampil[df_tampil['kategori'].str.contains(cari, case=False, na=False) | df_tampil['keterangan'].str.contains(cari, case=False, na=False)]
         
-        # CSS Canggih: Sembunyikan/Tampilkan elemen tergantung ukuran layar (Responsive Media Queries)
-        st.markdown("""
-            <style>
-            /* Tampilan Desktop (Laptop) */
-            .desktop-table-container { display: block; width: 100%; margin-bottom: 15px; }
-            .mobile-card-container { display: none; }
-            
-            .custom-table-v2 { width: 100%; border-collapse: collapse; font-size: 12px; }
-            .custom-table-v2 th { color: #8B0000; font-weight: 700; padding: 8px; border-bottom: 2px solid #8B0000; text-align: left; }
-            .custom-table-v2 td { padding: 8px; border-bottom: 1px solid rgba(139, 0, 0, 0.15); }
-            
-            /* Tampilan Khusus Mobile (HP) */
-            @media (max-width: 768px) {
-                .desktop-table-container { display: none !important; }
-                .mobile-card-container { display: block; }
-                
-                .tx-card {
-                    background: transparent;
-                    border: 1px solid rgba(139, 0, 0, 0.2);
-                    border-radius: 8px;
-                    padding: 10px;
-                    margin-bottom: 8px;
-                }
-                .tx-card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-                .tx-card-title { font-weight: 700; font-size: 13px; color: inherit; }
-                .tx-card-meta { font-size: 11px; color: #666; }
-                .tx-card-price { font-weight: 800; font-size: 13px; }
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
         # ==========================================
-        # LAYOUT 1: TAMPILAN LAPTOP (ANTI REWEL - RAPAT KIRI SATU BARIS)
+        # 2. PANEL UTALITAS AKSI (PINDAH KE ATAS - ANTI SCROLL JAUH)
         # ==========================================
-        html_desktop_rows = ""
-        for index, row in df_tampil.iterrows():
-            tgl_str = row['tanggal'].strftime('%d-%m-%Y')
-            color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
-            sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
-            ket_str = row['keterangan'] if row['keterangan'] else "-"
-            
-            # Kunci: String HTML ditulis lurus tanpa enter agar tidak memicu deteksi Markdown Code otomatis
-            html_desktop_rows += f"<tr><td>{tgl_str}</td><td>{row['wallet']}</td><td>{row['kategori']}</td><td style='color:{color_p}; font-weight:700;'>{sign_p}Rp {row['jumlah']:,.0f}</td><td>{row.get('reimburse', 'Tidak')}</td><td>{ket_str}</td><td style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</td></tr>"
-            
-        desktop_html = f"""<div class='desktop-table-container'><table class='custom-table-v2'><thead><tr><th>Tanggal</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th><th>ID</th></tr></thead><tbody>{html_desktop_rows}</tbody></table></div>"""
-        st.markdown(desktop_html, unsafe_allow_html=True)
-
-        # ==========================================
-        # LAYOUT 2: TAMPILAN HP (ANTI REWEL - CARD MINIMALIS)
-        # ==========================================
-        html_mobile_cards = ""
-        for index, row in df_tampil.iterrows():
-            tgl_mini = row['tanggal'].strftime('%d-%m')
-            color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
-            sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
-            rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
-            
-            # Kunci: String kartu juga disatukan lurus agar tidak terbaca sebagai Code Block oleh Streamlit
-            html_mobile_cards += f"<div class='tx-card'><div class='tx-card-row'><span class='tx-card-title'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span><span class='tx-card-price' style='color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span></div><div class='tx-card-row' style='margin-bottom:0;'><span class='tx-card-meta'>📅 {tgl_mini} | 💳 {row['wallet']}</span><span class='tx-card-meta' style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</span></div></div>"
-            
-        st.markdown(f"<div class='mobile-card-container'>{html_mobile_cards}</div>", unsafe_allow_html=True)
-        
-        # ==========================================
-        # PANEL UTALITAS AKSI (EDIT/HAPUS VIA ID) - SANGAT NYAMAN DI HP & LAPTOP
-        # ==========================================
-        st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 12px; margin-top: 15px; margin-bottom: 2px;'>⚡ Aksi Cepat Transaksi</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 12px; margin-top: 10px; margin-bottom: 2px;'>⚡ Aksi Cepat Transaksi</p>", unsafe_allow_html=True)
         opsi_pilih = {row['id_transaksi']: f"#{row['id_transaksi']} - {row['kategori']} (Rp {row['jumlah']:,.0f})" for _, row in df_tampil.iterrows()}
         
         if opsi_pilih:
@@ -463,6 +402,68 @@ elif st.session_state.menu_aktif == 'riwayat':
                     with col_del2:
                         if st.button("Batal", key="cancel_del_universal", use_container_width=True):
                             st.rerun()
+
+        st.markdown("<hr style='border-top: 1px solid rgba(139, 0, 0, 0.15); margin: 12px 0;'>", unsafe_allow_html=True)
+
+        # Inject CSS khusus untuk tabel & kartu (Rapat Kiri & Anti Rewel)
+        st.markdown("""
+            <style>
+            /* Tampilan Desktop (Laptop) */
+            .desktop-table-container { display: block; width: 100%; margin-bottom: 15px; }
+            .mobile-card-container { display: none; }
+            
+            .custom-table-v2 { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .custom-table-v2 th { color: #8B0000; font-weight: 700; padding: 8px; border-bottom: 2px solid #8B0000; text-align: left; }
+            .custom-table-v2 td { padding: 8px; border-bottom: 1px solid rgba(139, 0, 0, 0.15); }
+            
+            /* Tampilan Khusus Mobile (HP) */
+            @media (max-width: 768px) {
+                .desktop-table-container { display: none !important; }
+                .mobile-card-container { display: block; }
+                
+                .tx-card {
+                    background: transparent;
+                    border: 1px solid rgba(139, 0, 0, 0.2);
+                    border-radius: 8px;
+                    padding: 10px;
+                    margin-bottom: 8px;
+                }
+                .tx-card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+                .tx-card-title { font-weight: 700; font-size: 13px; color: inherit; }
+                .tx-card-meta { font-size: 11px; color: #666; }
+                .tx-card-price { font-weight: 800; font-size: 13px; }
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # ==========================================
+        # LAYOUT 1: TAMPILAN LAPTOP (TABEL ELEGAN)
+        # ==========================================
+        html_desktop_rows = ""
+        for index, row in df_tampil.iterrows():
+            tgl_str = row['tanggal'].strftime('%d-%m-%Y')
+            color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
+            sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
+            ket_str = row['keterangan'] if row['keterangan'] else "-"
+            
+            html_desktop_rows += f"<tr><td>{tgl_str}</td><td>{row['wallet']}</td><td>{row['kategori']}</td><td style='color:{color_p}; font-weight:700;'>{sign_p}Rp {row['jumlah']:,.0f}</td><td>{row.get('reimburse', 'Tidak')}</td><td>{ket_str}</td><td style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</td></tr>"
+            
+        desktop_html = f"<div class='desktop-table-container'><table class='custom-table-v2'><thead><tr><th>Tanggal</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th><th>ID</th></tr></thead><tbody>{html_desktop_rows}</tbody></table></div>"
+        st.markdown(desktop_html, unsafe_allow_html=True)
+
+        # ==========================================
+        # LAYOUT 2: TAMPILAN HP (KARTU COMPACT ANTI PECAH)
+        # ==========================================
+        html_mobile_cards = ""
+        for index, row in df_tampil.iterrows():
+            tgl_mini = row['tanggal'].strftime('%d-%m')
+            color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
+            sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
+            rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
+            
+            html_mobile_cards += f"<div class='tx-card'><div class='tx-card-row'><span class='tx-card-title'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span><span class='tx-card-price' style='color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span></div><div class='tx-card-row' style='margin-bottom:0;'><span class='tx-card-meta'>📅 {tgl_mini} | 💳 {row['wallet']}</span><span class='tx-card-meta' style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</span></div></div>"
+            
+        st.markdown(f"<div class='mobile-card-container'>{html_mobile_cards}</div>", unsafe_allow_html=True)
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
     st.markdown("<p style='color: #8B0000; font-weight: bold; margin-bottom: 5px; font-size: 14px;'>📊 Rekap Ringkas Data</p>", unsafe_allow_html=True)
