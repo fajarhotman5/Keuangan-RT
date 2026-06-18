@@ -35,16 +35,17 @@ st.markdown("""
     footer { display: none !important; }
     header { display: none !important; }
     
-    /* GAYA TOMBOL UTAMA */
+    /* TOMBOL NAVIGASI MENU JADI LEBIH REPIH & COMPACT (KAPSUL MODERN) */
     div.stButton > button {
         background-color: #8B0000 !important;
         color: #FFFFFF !important;
-        border: 2px solid #8B0000 !important;
-        border-radius: 8px !important;
-        padding: 6px 12px !important;
+        border: 1px solid #8B0000 !important;
+        border-radius: 20px !important; /* Mengubah tombol jadi kapsul estetik */
+        padding: 4px 6px !important; /* Lebih tipis */
         font-weight: bold !important;
-        font-size: 13px !important;
-        transition: all 0.3s ease;
+        font-size: 11px !important; /* Huruf kompak khusus mobile */
+        height: auto !important;
+        min-height: unset !important;
     }
     div.stButton > button:hover {
         background-color: #000000 !important;
@@ -175,22 +176,19 @@ else:
     total_keluar = 0
     wallet_balances = {w: 0 for w in LIST_WALLET}
 
-# --- KARTU METRIK UTAMA ---
-col_s1, col_s2 = st.columns(2)
-with col_s1:
-    st.markdown(f"""
-        <div style='background-color: #000000; padding: 12px; border-radius: 8px; text-align: center; border: 2px solid #B8860B; margin-bottom: 8px;'>
-            <p style='margin: 0; font-size: 13px; color: #FFFFFF; font-weight: bold;'>Sisa Saldo Berjalan</p>
-            <h3 style='margin: 3px 0 0 0; font-size: 20px; font-weight: 900; color: #FFD700;'>Rp {sisa_saldo:,.0f}</h3>
+# --- KARTU METRIK UTAMA (MINI & MODERN PREMIUM) ---
+st.markdown(f"""
+    <div style='display: flex; gap: 8px; margin-bottom: 12px;'>
+        <div style='flex: 1; padding: 8px 6px; border-radius: 12px; text-align: center; background-color: #000000; border: 1.5px solid #B8860B; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+            <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); letter-spacing: 0.3px;'>Sisa Saldo Berjalan</p>
+            <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFD700;'>Rp {sisa_saldo:,.0f}</h3>
         </div>
-    """, unsafe_allow_html=True)
-with col_s2:
-    st.markdown(f"""
-        <div style='background-color: #8B0000; padding: 12px; border-radius: 8px; text-align: center; border: 2px solid #8B0000; margin-bottom: 8px;'>
-            <p style='margin: 0; font-size: 13px; color: #FFFFFF; font-weight: bold;'>Total Pengeluaran</p>
-            <h3 style='margin: 3px 0 0 0; font-size: 20px; font-weight: 900; color: #FFFFFF;'>Rp {total_keluar:,.0f}</h3>
+        <div style='flex: 1; padding: 8px 6px; border-radius: 12px; text-align: center; background-color: #8B0000; border: 1.5px solid #8B0000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+            <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.3px;'>Total Pengeluaran</p>
+            <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFFFFF;'>Rp {total_keluar:,.0f}</h3>
         </div>
-    """, unsafe_allow_html=True)
+    </div>
+""", unsafe_allow_html=True)
 
 # --- NAVIGASI MENU ---
 if 'menu_aktif' not in st.session_state:
