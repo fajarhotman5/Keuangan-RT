@@ -262,21 +262,63 @@ if st.session_state.menu_aktif == 'tambah':
             else:
                 st.error("Jumlah input harus lebih besar dari Rp 0!")
 
-# 2. MENU: UNDUH
+# 2. MENU: UNDUH (LAPORAN PDF RAPI & RANGKUMAN DETAIL)
 elif st.session_state.menu_aktif == 'unduh':
-    st.markdown("<h4 style='color: #8B0000;'>📥 Ekspor Laporan</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #8B0000; margin-bottom: 15px;'>📥 Ekspor Laporan & Ringkasan</h4>", unsafe_allow_html=True)
+    
     if df_trans.empty:
         st.info("Tidak ada data transaksi yang dapat diekspor.")
     else:
         col_d1, col_d2 = st.columns(2)
-        with col_d1: tgl_awal = st.date_input("Mulai Tanggal", df_trans['tanggal'].min())
-        with col_d2: tgl_akhir = st.date_input("Sampai Tanggal", df_trans['tanggal'].max())
+        with col_d1: 
+            tgl_awal = st.date_input("Mulai Tanggal", df_trans['tanggal'].min(), key="eks_awal")
+        with col_d2: 
+            tgl_akhir = st.date_input("Sampai Tanggal", df_trans['tanggal'].max(), key="eks_akhir")
             
         df_filter = df_trans[(df_trans['tanggal'] >= tgl_awal) & (df_trans['tanggal'] <= tgl_akhir)].copy()
         
         if df_filter.empty:
             st.warning("Data kosong untuk rentang tanggal tersebut.")
         else:
+            # =================================================================
+            # PANEL 1: RANGKUMAN OTOMATIS (DASHBOARD KECIL SEBELUM DOWNLOAD)
+            # =================================================================
+            st.markdown("<p style='font-size: 14px; font-weight: bold; color: #8B0000; margin-top: 10px; margin-bottom: 5px;'>📊 Ringkasan Mutasi Terfilter</p>", unsafe_allow_html=True)
+            
+            tab_jns, tab_wlt, tab_kat, tab_rmb = st.tabs(["💰 Aliran Dana", "💳 Per Wallet", "🗂️ Per Kategori", "🔄 Reimburse"])
+            
+            with tab_jns:
+                df_jns = df_filter.groupby('jenis')['jumlah'].sum().reset_index()
+                for _, r in df_jns.iterrows():
+                    warna = "#c62828" if r['jenis'] == 'Pengeluaran' else "#2e7d32"
+                    st.markdown(f"• **{r['jenis']}**: <span style='color:{warna}; font-weight:bold;'>Rp {r['jumlah']:,.0f}</span>", unsafe_allow_html=True)
+            
+            with tab_wlt:
+                df_wlt = df_filter.groupby(['wallet', 'jenis'])['jumlah'].sum().unstack(fill_value=0).reset_index()
+                for _, r in df_wlt.iterrows():
+                    pemasukan_w = r.get('Pemasukan', 0)
+                    pengeluaran_w = r.get('Pengeluaran', 0)
+                    st.markdown(f"• **{r['wallet']}** → Masuk: <span style='color:#2e7d32;'>Rp {pemasukan_w:,.0f}</span> | Keluar: <span style='color:#c62828;'>Rp {pengeluaran_w:,.0f}</span>", unsafe_allow_html=True)
+                    
+            with tab_kat:
+                df_kat = df_filter.groupby(['kategori', 'jenis'])['jumlah'].sum().reset_index()
+                for _, r in df_kat.sort_values(by='jumlah', ascending=False).iterrows():
+                    warna = "#c62828" if r['jenis'] == 'Pengeluaran' else "#2e7d32"
+                    st.markdown(f"• [{r['jenis']}] **{r['kategori']}**: <span style='color:{warna};'>Rp {r['jumlah']:,.0f}</span>", unsafe_allow_html=True)
+                    
+            with tab_rmb:
+                df_rmb = df_filter[df_filter['jenis'] == 'Pengeluaran'].groupby('reimburse')['jumlah'].sum().reset_index()
+                # Jika kosong, buat default nilai 0
+                total_ya = df_rmb[df_rmb['reimburse'] == 'Ya']['jumlah'].sum()
+                total_tidak = df_rmb[df_rmb['reimburse'] == 'Tidak']['jumlah'].sum()
+                st.markdown(f"• **Butuh Reimburse (Ya)**: <span style='color:#c62828; font-weight:bold;'>Rp {total_ya:,.0f}</span>", unsafe_allow_html=True)
+                st.markdown(f"• **Bukan Reimburse (Tidak)**: <span style='color:#555555;'>Rp {total_tidak:,.0f}</span>", unsafe_allow_html=True)
+
+            st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 15px 0;'>", unsafe_allow_html=True)
+            
+            # =================================================================
+            # PANEL 2: PROSES GENERATE & DOWNLOAD LAPORAN
+            # =================================================================
             col_b1, col_b2 = st.columns(2)
             with col_b1:
                 buffer_xl = io.BytesIO()
@@ -291,43 +333,77 @@ elif st.session_state.menu_aktif == 'unduh':
                 )
             with col_b2:
                 buffer_pdf = io.BytesIO()
-                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=54, bottomMargin=54)
+                # Atur margins halaman agar muat lebih lebar dan estetis
+                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=40)
                 story = []
+                
                 styles = getSampleStyleSheet()
-                title_style = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#8B0000'), alignment=1, spaceAfter=20)
-                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#000000'), alignment=1, spaceAfter=20)
-                cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=9, leading=11)
-                header_style = ParagraphStyle(name='HeaderStyle', fontName='Helvetica-Bold', fontSize=9, textColor=colors.white, leading=11)
+                title_style = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#8B0000'), alignment=1, spaceAfter=5)
+                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica-Oblique', fontSize=10, textColor=colors.HexColor('#555555'), alignment=1, spaceAfter=20)
                 
-                story.append(Paragraph("LAPORAN PERINCIAN KEUANGAN", title_style))
-                story.append(Paragraph(f"Periode: {tgl_awal.strftime('%d/%m/%Y')} s/d {tgl_akhir.strftime('%d/%m/%Y')}", sub_style))
-                story.append(Spacer(1, 10))
+                # Desain style font isi tabel & header tabel agar presisi
+                header_style = ParagraphStyle(name='HeaderStyle', fontName='Helvetica-Bold', fontSize=9, textColor=colors.white, leading=11, alignment=0)
+                cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=9, leading=12, textColor=colors.HexColor('#222222'))
+                cell_style_bold = ParagraphStyle(name='CellStyleBold', fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=colors.HexColor('#222222'))
                 
-                table_data = [[Paragraph("Jenis", header_style), Paragraph("Tanggal", header_style), Paragraph("Wallet", header_style), Paragraph("Kategori", header_style), Paragraph("Nominal", header_style), Paragraph("Reimburse", header_style), Paragraph("Keterangan", header_style)]]
+                # Judul Dokumen PDF
+                story.append(Paragraph("LAPORAN MUTASI KEUANGAN KEI", title_style))
+                story.append(Paragraph(f"Periode Data: {tgl_awal.strftime('%d/%m/%Y')} s/d {tgl_akhir.strftime('%d/%m/%Y')}", sub_style))
+                story.append(Spacer(1, 5))
                 
+                # Struktur Judul Tabel (Headers) Baru yang Lebih Rapi
+                table_data = [[
+                    Paragraph("TANGGAL", header_style), 
+                    Paragraph("ALIRAN", header_style), 
+                    Paragraph("WALLET", header_style), 
+                    Paragraph("KATEGORI", header_style), 
+                    Paragraph("NOMINAL", header_style), 
+                    Paragraph("REIMBURSE", header_style), 
+                    Paragraph("KETERANGAN", header_style)
+                ]]
+                
+                # Mengisi Baris Data
                 for _, row in df_filter.iterrows():
+                    txt_jenis = "Masuk" if row['jenis'] == "Pemasukan" else "Keluar"
+                    val_remb = row.get('reimburse', 'Tidak')
+                    
                     table_data.append([
-                        Paragraph(str(row['jenis']), cell_style),
                         Paragraph(row['tanggal'].strftime('%d/%m/%Y'), cell_style),
+                        Paragraph(txt_jenis, cell_style),
                         Paragraph(str(row['wallet']), cell_style),
                         Paragraph(str(row['kategori']), cell_style),
-                        Paragraph(f"{row['jumlah']:,.0f}", cell_style),
-                        Paragraph(str(row.get('reimburse', 'Tidak')), cell_style),
+                        Paragraph(f"Rp {row['jumlah']:,.0f}", cell_style_bold),
+                        Paragraph(str(val_remb), cell_style),
                         Paragraph(str(row['keterangan'] or '-'), cell_style)
                     ])
                 
-                col_widths = [60, 55, 55, 90, 65, 55, 145] 
+                # Penyesuaian Lebar Kolom agar tidak kepotong di kertas ukuran Letter/A4 (Total 552pt)
+                col_widths = [60, 50, 65, 95, 75, 60, 147] 
+                
                 t = Table(table_data, colWidths=col_widths, repeatRows=1)
                 t.setStyle(TableStyle([
+                    # Desain Header Tabel: Latar Merah Tua, Teks Putih
                     ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
-                    ('ALIGN', (0,0), (-1,-1), 'LEFT'),
                     ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
-                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')])
+                    ('TOPPADDING', (0,0), (-1,0), 8),
+                    ('BOTTOMPADDING', (0,0), (-1,0), 8),
+                    # Desain Baris Data
+                    ('TOPPADDING', (0,1), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,1), (-1,-1), 6),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E0E0E0')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#FDFDFD')])
                 ]))
+                
                 story.append(t)
                 doc.build(story, canvasmaker=canvas.Canvas)
-                st.download_button(label="🔴 Unduh File PDF", data=buffer_pdf.getvalue(), file_name=f"Laporan_{tgl_awal}_{tgl_akhir}.pdf", mime="application/pdf", use_container_width=True)
+                
+                st.download_button(
+                    label="🔴 Unduh File PDF", 
+                    data=buffer_pdf.getvalue(), 
+                    file_name=f"Laporan_Keuangan_{tgl_awal}_{tgl_akhir}.pdf", 
+                    mime="application/pdf", 
+                    use_container_width=True
+                )
 
 # 3. MENU: RIWAYAT
 elif st.session_state.menu_aktif == 'riwayat':
