@@ -265,7 +265,7 @@ elif st.session_state.menu_aktif == 'unduh':
         else:
             # Waktu unduh real-time sesuai device saat ini
             waktu_wib = datetime.now() + timedelta(hours=7)
-            waktu_cetak = datetime.now().strftime("%d-%m-%Y %H:%M:%Y"[:16])
+            waktu_cetak = waktu_wib.strftime("%d-%m-%Y %H:%M WIB")
             
             col_b1, col_b2 = st.columns(2)
             with col_b1:
