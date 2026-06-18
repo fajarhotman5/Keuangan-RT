@@ -147,11 +147,11 @@ KAT_PENGELUARAN = ['Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Bel
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
 ALL_KATEGORI = list(set(KAT_PENGELUARAN + KAT_PEMASUKAN))
 
-# --- APP HEADER ---
+# --- JUDUL UTAMA & SUB-JUDUL TEMA BARU ---
 st.markdown("""
-    <div style='text-align: center; margin-bottom: 20px;'>
-        <p class='header-title' style='font-size: 28px; font-weight: 800; color: #8B0000; margin-bottom: 0px;'>Informasi Keuangan Kei</p>
-        <p class='header-subtitle' style='color: #B8860B; font-size: 13px; font-style: italic; font-weight: bold; margin-top: 3px;'>Harus catat setiap saat</p>
+    <div style='text-align: center; margin-bottom: 15px;'>
+        <h2 style='margin: 0; font-size: 20px; font-weight: 800; color: #8B0000; letter-spacing: 0.5px;'>Informasi Keuangan Kei</h2>
+        <p style='margin: 2px 0 0 0; font-size: 11px; color: #FFFFFF; font-weight: 500; opacity: 0.9;'>harus catat setiap saat</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -176,12 +176,12 @@ else:
     total_keluar = 0
     wallet_balances = {w: 0 for w in LIST_WALLET}
 
-# --- KARTU METRIK UTAMA (MINI & MODERN PREMIUM) ---
+# --- KARTU METRIK UTAMA (KEMBAR MAROON PREMIUM) ---
 st.markdown(f"""
     <div style='display: flex; gap: 8px; margin-bottom: 12px;'>
-        <div style='flex: 1; padding: 8px 6px; border-radius: 12px; text-align: center; background-color: #000000; border: 1.5px solid #B8860B; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-            <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); letter-spacing: 0.3px;'>Sisa Saldo Berjalan</p>
-            <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFD700;'>Rp {sisa_saldo:,.0f}</h3>
+        <div style='flex: 1; padding: 8px 6px; border-radius: 12px; text-align: center; background-color: #8B0000; border: 1.5px solid #8B0000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+            <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.3px;'>Sisa Saldo Berjalan</p>
+            <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFFFFF;'>Rp {sisa_saldo:,.0f}</h3>
         </div>
         <div style='flex: 1; padding: 8px 6px; border-radius: 12px; text-align: center; background-color: #8B0000; border: 1.5px solid #8B0000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
             <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.3px;'>Total Pengeluaran</p>
