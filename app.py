@@ -40,7 +40,7 @@ st.markdown("""
         background-color: #8B0000 !important;
         color: #FFFFFF !important;
         border: 1px solid #8B0000 !important;
-        border-radius: 20px !important; /* Mengubah tombol jadi kapsul estetik */
+        border-radius: 6px !important; /* Mengubah tombol jadi kapsul estetik */
         padding: 4px 6px !important; /* Lebih tipis */
         font-weight: bold !important;
         font-size: 11px !important; /* Huruf kompak khusus mobile */
