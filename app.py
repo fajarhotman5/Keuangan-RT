@@ -336,7 +336,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT (ELESAN MODERN & TOMBOL TINDAKAN LANGSUNG DI TABEL)
+# 3. MENU: RIWAYAT (DUAL LAYOUT: SEMPURNA DI LAPTOP, KRISPI DI HP)
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 5px;'>📋 Riwayat Buku Kas</p>", unsafe_allow_html=True)
     if df_trans.empty:
@@ -347,67 +347,116 @@ elif st.session_state.menu_aktif == 'riwayat':
         if cari:
             df_tampil = df_tampil[df_tampil['kategori'].str.contains(cari, case=False, na=False) | df_tampil['keterangan'].str.contains(cari, case=False, na=False)]
         
-        # Buat columns Streamlit untuk meniru header tabel data + tindakan
+        # CSS Canggih: Sembunyikan/Tampilkan elemen tergantung ukuran layar (Responsive Media Queries)
         st.markdown("""
             <style>
-            .table-hdr {
-                color: #8B0000; font-weight: 700; font-size: 11px; 
-                border-bottom: 2px solid #8B0000; padding: 4px 0; text-transform: uppercase;
-            }
-            .table-cell {
-                font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgba(139, 0, 0, 0.15);
-                display: flex; align-items: center; min-height: 35px;
+            /* Tampilan Desktop (Laptop) */
+            .desktop-table-container { display: block; width: 100%; margin-bottom: 15px; }
+            .mobile-card-container { display: none; }
+            
+            .custom-table-v2 { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .custom-table-v2 th { color: #8B0000; font-weight: 700; padding: 8px; border-bottom: 2px solid #8B0000; text-align: left; }
+            .custom-table-v2 td { padding: 8px; border-bottom: 1px solid rgba(139, 0, 0, 0.15); }
+            
+            /* Tampilan Khusus Mobile (HP) */
+            @media (max-width: 768px) {
+                .desktop-table-container { display: none !important; }
+                .mobile-card-container { display: block; }
+                
+                .tx-card {
+                    background: transparent;
+                    border: 1px solid rgba(139, 0, 0, 0.2);
+                    border-radius: 8px;
+                    padding: 10px;
+                    margin-bottom: 8px;
+                }
+                .tx-card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+                .tx-card-title { font-weight: 700; font-size: 13px; color: inherit; }
+                .tx-card-meta { font-size: 11px; color: #666; }
+                .tx-card-price { font-weight: 800; font-size: 13px; }
             }
             </style>
         """, unsafe_allow_html=True)
 
-        # Header Kompak Tanpa Kolom Aliran
-        h_col1, h_col2, h_col3, h_col4, h_col5, h_col6 = st.columns([1.5, 1.8, 2.2, 2.3, 1.2, 2.0])
-        h_col1.markdown("<div class='table-hdr'>Tanggal</div>", unsafe_allow_html=True)
-        h_col2.markdown("<div class='table-hdr'>Wallet</div>", unsafe_allow_html=True)
-        h_col3.markdown("<div class='table-hdr'>Kategori</div>", unsafe_allow_html=True)
-        h_col4.markdown("<div class='table-hdr'>Nominal</div>", unsafe_allow_html=True)
-        h_col5.markdown("<div class='table-hdr'>Reimb</div>", unsafe_allow_html=True)
-        h_col6.markdown("<div class='table-hdr'>Tindakan</div>", unsafe_allow_html=True)
-
-        # Isi Baris Data Berjejer dengan Tombol Aksi
+        # ==========================================
+        # LAYOUT 1: TAMPILAN LAPTOP (TABEL ELEGAN SEPERTI DI SCREENSHOT)
+        # ==========================================
+        html_desktop_rows = ""
         for index, row in df_tampil.iterrows():
-            tgl_format = row['tanggal'].strftime('%d-%m-%Y')
-            color_price = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
-            sign_price = "+" if row['jenis'] == "Pemasukan" else "-"
+            tgl_str = row['tanggal'].strftime('%d-%m-%Y')
+            color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
+            sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
+            ket_str = row['keterangan'] if row['keterangan'] else "-"
             
-            r_col1, r_col2, r_col3, r_col4, r_col5, r_col6 = st.columns([1.5, 1.8, 2.2, 2.3, 1.2, 2.0])
+            html_desktop_rows += f"""
+            <tr>
+                <td>{tgl_str}</td>
+                <td>{row['wallet']}</td>
+                <td>{row['kategori']}</td>
+                <td style='color:{color_p}; font-weight:700;'>{sign_p}Rp {row['jumlah']:,.0f}</td>
+                <td>{row.get('reimburse', 'Tidak')}</td>
+                <td>{ket_str}</td>
+                <td style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</td>
+            </tr>
+            """
             
-            r_col1.markdown(f"<div class='table-cell'>{tgl_format}</div>", unsafe_allow_html=True)
-            r_col2.markdown(f"<div class='table-cell'>{row['wallet']}</div>", unsafe_allow_html=True)
-            r_col3.markdown(f"<div class='table-cell' title='{row['keterangan'] or ''}'>{row['kategori']}</div>", unsafe_allow_html=True)
-            r_col4.markdown(f"<div class='table-cell' style='color:{color_price}; font-weight:700;'>{sign_price}Rp {row['jumlah']:,.0f}</div>", unsafe_allow_html=True)
-            r_col5.markdown(f"<div class='table-cell'>{row.get('reimburse', 'Tidak')}</div>", unsafe_allow_html=True)
-            
-            # Kolom Tindakan Khusus: Pasang Tombol Kecil Berdampingan (📝 & 🗑️)
-            with r_col6:
-                btn_space1, btn_space2 = st.columns(2)
-                with btn_space1:
-                    if st.button("📝", key=f"edt_{row['id_transaksi']}", use_container_width=True):
-                        st.session_state.id_edit_aktif = row['id_transaksi']
-                        st.session_state.mode_riwayat = "edit"
-                with btn_space2:
-                    if st.button("🗑️", key=f"del_{row['id_transaksi']}", use_container_width=True):
-                        st.session_state.id_edit_aktif = row['id_transaksi']
-                        st.session_state.mode_riwayat = "hapus"
+        desktop_html = f"""
+        <div class='desktop-table-container'>
+            <table class='custom-table-v2'>
+                <thead>
+                    <tr>
+                        <th>Tanggal</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th><th>ID</th>
+                    </tr>
+                </thead>
+                <tbody>{html_desktop_rows}</tbody>
+            </table>
+        </div>
+        """
+        st.markdown(desktop_html, unsafe_allow_html=True)
 
-        # --- JENDELA FORM EDIT / KONFIRMASI HAPUS (MUNCUL HANYA SAAT DIKLIK) ---
-        if 'mode_riwayat' in st.session_state and 'id_edit_aktif' in st.session_state:
-            id_target = st.session_state.id_edit_aktif
-            data_aktif = df_trans[df_trans['id_transaksi'] == id_target]
+        # ==========================================
+        # LAYOUT 2: TAMPILAN HP (KARTU COMPACT ANTI PECAH)
+        # ==========================================
+        html_mobile_cards = ""
+        for index, row in df_tampil.iterrows():
+            tgl_mini = row['tanggal'].strftime('%d-%m')
+            color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
+            sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
+            rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
             
-            if not data_aktif.empty:
-                data_row = data_aktif.iloc[0]
-                st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 15px 0;'>", unsafe_allow_html=True)
+            html_mobile_cards += f"""
+            <div class='tx-card'>
+                <div class='tx-card-row'>
+                    <span class='tx-card-title'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span>
+                    <span class='tx-card-price' style='color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span>
+                </div>
+                <div class='tx-card-row' style='margin-bottom:0;'>
+                    <span class='tx-card-meta'>📅 {tgl_mini} | 💳 {row['wallet']}</span>
+                    <span class='tx-card-meta' style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</span>
+                </div>
+            </div>
+            """
+        st.markdown(f"<div class='mobile-card-container'>{html_mobile_cards}</div>", unsafe_allow_html=True)
+        
+        # ==========================================
+        # PANEL UTALITAS AKSI (EDIT/HAPUS VIA ID) - SANGAT NYAMAN DI HP & LAPTOP
+        # ==========================================
+        st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 12px; margin-top: 15px; margin-bottom: 2px;'>⚡ Aksi Cepat Transaksi</p>", unsafe_allow_html=True)
+        opsi_pilih = {row['id_transaksi']: f"#{row['id_transaksi']} - {row['kategori']} (Rp {row['jumlah']:,.0f})" for _, row in df_tampil.iterrows()}
+        
+        if opsi_pilih:
+            col_action1, col_action2 = st.columns([3, 2])
+            with col_action1:
+                id_terpilih = st.selectbox("Pilih ID Transaksi:", options=list(opsi_pilih.keys()), format_func=lambda x: opsi_pilih[x], label_visibility="collapsed")
+            with col_action2:
+                mode_aksi = st.selectbox("Pilih Tindakan:", ["Pilih...", "📝 Edit", "🗑️ Hapus"], label_visibility="collapsed")
+            
+            if id_terpilih and mode_aksi != "Pilih...":
+                data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
                 
-                if st.session_state.mode_riwayat == "edit":
-                    st.markdown(f"<p style='color: #B8860B; font-weight: bold; font-size: 13px;'>📝 Edit Data Transaksi (ID: {id_target})</p>", unsafe_allow_html=True)
-                    with st.form("form_cepat_edit"):
+                if mode_aksi == "📝 Edit":
+                    with st.form("form_cepat_edit_universal"):
+                        st.markdown(f"<p style='color: #B8860B; font-weight: bold; font-size: 12px;'>📝 Edit Data #{id_terpilih}</p>", unsafe_allow_html=True)
                         new_tgl = st.date_input("Tanggal", data_row['tanggal'])
                         new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(data_row['jenis']))
                         new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
@@ -420,32 +469,29 @@ elif st.session_state.menu_aktif == 'riwayat':
                         
                         col_ef1, col_ef2 = st.columns(2)
                         with col_ef1:
-                            if st.form_submit_button("Simpan Perubahan", use_container_width=True):
+                            if st.form_submit_button("Simpan", use_container_width=True):
                                 conn = get_connection()
                                 with conn.cursor() as cursor:
                                     cursor.execute("UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
-                                                   (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_target))
+                                                   (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih))
                                 conn.commit(); conn.close()
-                                del st.session_state.mode_riwayat
-                                st.success("Data berhasil diperbarui!"); st.rerun()
+                                st.success("Berhasil diubah!"); st.rerun()
                         with col_ef2:
                             if st.form_submit_button("Batal", use_container_width=True):
-                                del st.session_state.mode_riwayat; st.rerun()
+                                st.rerun()
                                 
-                elif st.session_state.mode_riwayat == "hapus":
-                    st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:10px; border-radius:8px; border:1px solid #c62828; margin-bottom:10px; font-size:12px; color:#c62828;'>⚠️ <b>Konfirmasi Hapus:</b> Apakah Anda yakin ingin menghapus data <b>{data_row['kategori']} - Rp {data_row['jumlah']:,.0f}</b>?</div>", unsafe_allow_html=True)
+                elif mode_aksi == "🗑️ Hapus":
+                    st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:8px; border-radius:6px; border:1px solid #c62828; margin-bottom:8px; font-size:11px; color:#c62828;'>Hapus data <b>{data_row['kategori']} (Rp {data_row['jumlah']:,.0f})</b>?</div>", unsafe_allow_html=True)
                     col_del1, col_del2 = st.columns(2)
                     with col_del1:
-                        if st.button("🔴 Ya, Hapus", key="confirm_del_btn", use_container_width=True):
+                        if st.button("🔴 Ya, Hapus", key="confirm_del_universal", use_container_width=True):
                             conn = get_connection()
-                            with conn.cursor() as cursor: cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_target,))
+                            with conn.cursor() as cursor: cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
                             conn.commit(); conn.close()
-                            del st.session_state.mode_riwayat
-                            st.success("Data terhapus!"); st.rerun()
+                            st.success("Terhapus!"); st.rerun()
                     with col_del2:
-                        if st.button("Batal", key="cancel_del_btn", use_container_width=True):
-                            del st.session_state.mode_riwayat; st.rerun()
-
+                        if st.button("Batal", key="cancel_del_universal", use_container_width=True):
+                            st.rerun()
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
     st.markdown("<p style='color: #8B0000; font-weight: bold; margin-bottom: 5px; font-size: 14px;'>📊 Rekap Ringkas Data</p>", unsafe_allow_html=True)
