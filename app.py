@@ -508,25 +508,44 @@ elif st.session_state.menu_aktif == 'rekap':
             if df_chart_rk.empty:
                 st.caption("Tidak ada grafik pengeluaran.")
             else:
-                # Diubah jadi vertikal (x='kategori', y='jumlah'), warna-warni kalem per kategori, urut dari yang terbesar
+                # Urut dari yang terbesar
                 df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=False)
+                
+                # FUNGSI PANGKAS TEKS KATEGORI KHUSUS MOBILE (MAKS 12 CHAR)
+                def trim_text(text):
+                    if len(text) > 12:
+                        return text[:10] + "..."
+                    return text
+                
+                # Buat kolom baru khusus untuk label sumbu X
+                df_chart_rk['kategori_mini'] = df_chart_rk['kategori'].apply(trim_text)
+                
+                # --- UPDATE GRAFIK (PALET GELAP & LABEL KRISPI) ---
                 fig = px.bar(
                     df_chart_rk, 
-                    x='kategori', 
+                    x='kategori_mini',  # Gunakan label teks yang sudah dipangkas
                     y='jumlah', 
                     text='jumlah',
                     color='kategori', 
-                    color_discrete_sequence=px.colors.qualitative.Safe
+                    # Ganti ke palet warna-warni yang tone-nya agak gelap dikit (elegan)
+                    color_discrete_sequence=px.colors.qualitative.Dark24
                 )
+                
                 fig.update_layout(
                     xaxis_title=None, 
                     yaxis_title=None, 
-                    margin=dict(t=5, b=5, l=5, r=5), 
-                    height=200, 
-                    showlegend=False, # Sembunyikan legenda samping agar pas & gak sempit di HP
-                    font=dict(size=10),
+                    margin=dict(t=5, b=25, l=5, r=5), # Beri sedikit ruang bawah untuk label miring
+                    height=220, # Tinggi dinaikkan dikit biar tulisan miring muat
+                    showlegend=False, # Sembunyikan legenda agar pas di HP
                     paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)'
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(size=10),
+                    # --- FIX LABEL TULISAN KATEGORI DI HP ---
+                    xaxis=dict(
+                        tickangle=-30, # Putar teks kategori agar miring ke bawah
+                        tickfont=dict(size=9), # Ukuran font tulisan kategori diperkecil dikit
+                        automargin=True # Biar Plotly otomatis ngatur jarak margin bawah
+                    )
                 )
                 fig.update_traces(
                     texttemplate='Rp %{text:,.0f}', 
