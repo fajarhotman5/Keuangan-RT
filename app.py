@@ -16,9 +16,15 @@ st.set_page_config(page_title="Keuangan Kei", page_icon="💰", layout="centered
 # Custom CSS Responsif untuk HP, iPad, Tablet, & Laptop
 st.markdown("""
     <style>
-    /* Tambahkan ini untuk menghilangkan ikon link yang mengganggu */
-    .stApp a.element-header-anchor {
+    /* 1. PASTE KODE BERSIH-BERSIH LINK DI SINI */
+    .stApp a.element-header-anchor, 
+    a.element-header-anchor, 
+    .stMarkdown a, 
+    [data-testid="stMarkdownContainer"] a.element-header-anchor {
         display: none !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        pointer-events: none !important;
     }
     /* Sembunyikan elemen bawaan Streamlit yang mengganggu */
     [data-testid="stAppDeployButton"] { display: none !important; }
