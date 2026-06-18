@@ -461,15 +461,15 @@ elif st.session_state.menu_aktif == 'rekap':
                 fig.update_traces(text=None)
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-# 5. MENU: WALLET (FIXED & BERSIH DARI BOCORAN HTML)
+# 5. MENU: WALLET (BERSIH TOTAL & ANTI BOCOR)
 elif st.session_state.menu_aktif == 'wallet':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 8px;'>💳 Sisa Saldo per Wallet</p>", unsafe_allow_html=True)
     
-    # 1. Buka container utama SEBELUM loop mulai
+    # 1. Mulai container baris pembungkus kapsul
     wallet_html = "<div style='display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start;'>"
     
     for w_name in LIST_WALLET:
-        w_bal = wallet_balances[w_name]
+        w_bal = wallet_balances.get(w_name, 0)
         
         if w_bal < 0:
             border_c = "#c62828"
@@ -480,7 +480,7 @@ elif st.session_state.menu_aktif == 'wallet':
             bg_c = "rgba(184, 134, 11, 0.08)"
             text_c = "inherit"
             
-        # 2. Masukkan item-item kapsul ke dalam string
+        # 2. Gabungkan string kapsul ke dalam satu variabel tunggal
         wallet_html += f"""
         <div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'>
             <span style='font-weight: bold; color: {border_c};'>{w_name}:</span> 
@@ -488,8 +488,8 @@ elif st.session_state.menu_aktif == 'wallet':
         </div>
         """
         
-    # 3. Tutup container utama SETELAH loop selesai
+    # 3. Tutup container pembungkus setelah loop selesai
     wallet_html += "</div>"
     
-    # 4. Cetak SEKALI SAJA ke Streamlit dengan aman
+    # 4. Cetak sekali saja ke layar secara aman
     st.markdown(wallet_html, unsafe_allow_html=True)
