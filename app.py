@@ -461,17 +461,16 @@ elif st.session_state.menu_aktif == 'rekap':
                 fig.update_traces(text=None)
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-# 5. MENU: WALLET (SUPER MINI, LIST COMPACT KHUSUS HP)
+# 5. MENU: WALLET (FIXED & BERSIH DARI BOCORAN HTML)
 elif st.session_state.menu_aktif == 'wallet':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 8px;'>💳 Sisa Saldo per Wallet</p>", unsafe_allow_html=True)
     
-    # Membuat container flexbox agar label dompet kecil-kecil berjejer hemat tempat
+    # 1. Buka container utama SEBELUM loop mulai
     wallet_html = "<div style='display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start;'>"
     
     for w_name in LIST_WALLET:
         w_bal = wallet_balances[w_name]
         
-        # Penentuan warna teks adaptif: merah tebal kalau minus, gold/hijau kalau aman
         if w_bal < 0:
             border_c = "#c62828"
             bg_c = "rgba(198, 40, 40, 0.1)"
@@ -479,14 +478,18 @@ elif st.session_state.menu_aktif == 'wallet':
         else:
             border_c = "#B8860B"
             bg_c = "rgba(184, 134, 11, 0.08)"
-            text_c = "inherit" # Ikut warna tema dark/light mode agar krispi
+            text_c = "inherit"
             
+        # 2. Masukkan item-item kapsul ke dalam string
         wallet_html += f"""
-            <div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'>
-                <span style='font-weight: bold; color: {border_c};'>{w_name}:</span> 
-                <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span>
-            </div>
+        <div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'>
+            <span style='font-weight: bold; color: {border_c};'>{w_name}:</span> 
+            <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span>
+        </div>
         """
         
+    # 3. Tutup container utama SETELAH loop selesai
     wallet_html += "</div>"
+    
+    # 4. Cetak SEKALI SAJA ke Streamlit dengan aman
     st.markdown(wallet_html, unsafe_allow_html=True)
