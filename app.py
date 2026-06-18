@@ -456,7 +456,7 @@ elif st.session_state.menu_aktif == 'riwayat':
         # ==========================================
         html_mobile_cards = ""
         for index, row in df_tampil.iterrows():
-            tgl_mini = row['tanggal'].strftime('%d-%m')
+            tgl_mini = row['tanggal'].strftime('%d-%m-%Y')
             color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
             sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
             rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
