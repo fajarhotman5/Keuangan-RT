@@ -70,7 +70,7 @@ st.markdown("""
         width: 100%;
         min-width: 600px;
         border-collapse: collapse;
-        font-size: 12px; /* Ukuran font data ramah HP */
+        font-size: 12px;
     }
     .custom-table th {
         background-color: transparent;
@@ -84,8 +84,8 @@ st.markdown("""
     }
     .custom-table td {
         padding: 8px 6px;
-        border-bottom: 1px solid rgba(139, 0, 0, 0.1);
-        color: inherit !important;
+        border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+        color: inherit !important; 
     }
     .badge-masuk { color: #2e7d32; font-weight: bold; }
     .badge-keluar { color: #c62828; font-weight: bold; }
@@ -248,7 +248,7 @@ if st.session_state.menu_aktif == 'tambah':
             else:
                 st.error("Jumlah input harus lebih besar dari Rp 0!")
 
-# 2. MENU: UNDUH (FORMAT TANGGAL DD-MM-YYYY & INFO WAKTU SEKARANG)
+# 2. MENU: UNDUH
 elif st.session_state.menu_aktif == 'unduh':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 10px;'>📥 Ekspor Laporan Dokumen</p>", unsafe_allow_html=True)
     if df_trans.empty:
@@ -263,13 +263,11 @@ elif st.session_state.menu_aktif == 'unduh':
         if df_filter.empty:
             st.warning("Data kosong untuk rentang tanggal tersebut.")
         else:
-            # Waktu unduh real-time sesuai device saat ini
             waktu_wib = datetime.now() + timedelta(hours=7)
             waktu_cetak = waktu_wib.strftime("%d-%m-%Y %H:%M WIB")
             
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                # EXCEL: Mengubah penulisan format tanggal menjadi DD-MM-YYYY
                 df_excel = df_filter.copy()
                 df_excel['tanggal'] = pd.to_datetime(df_excel['tanggal']).dt.strftime('%d-%m-%Y')
                 
@@ -297,12 +295,10 @@ elif st.session_state.menu_aktif == 'unduh':
                 cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#222222'))
                 cell_style_bold = ParagraphStyle(name='CellStyleBold', fontName='Helvetica-Bold', fontSize=8, leading=11, textColor=colors.HexColor('#222222'))
                 
-                # Header Dokumen Estetis + Waktu Unduh Device
                 story.append(Paragraph(f"Waktu Cetak: {waktu_cetak}", meta_style))
                 story.append(Paragraph("LAPORAN MUTASI KEUANGAN KEI", title_style))
                 story.append(Paragraph(f"Periode Laporan: {tgl_awal.strftime('%d-%m-%Y')} s/d {tgl_akhir.strftime('%d-%m-%Y')}", sub_style))
                 
-                # Komponen Judul Tabel PDF Premium
                 table_data = [[
                     Paragraph("TANGGAL", header_style), Paragraph("ALIRAN", header_style), Paragraph("WALLET", header_style), 
                     Paragraph("KATEGORI", header_style), Paragraph("NOMINAL", header_style), Paragraph("REIMBURSE", header_style), 
@@ -311,7 +307,6 @@ elif st.session_state.menu_aktif == 'unduh':
                 
                 for _, row in df_filter.iterrows():
                     txt_jenis = "Masuk" if row['jenis'] == "Pemasukan" else "Keluar"
-                    # Format tanggal PDF diubah ke DD-MM-YYYY
                     tgl_str = row['tanggal'].strftime('%d-%m-%Y')
                     
                     table_data.append([
@@ -324,7 +319,6 @@ elif st.session_state.menu_aktif == 'unduh':
                         Paragraph(str(row['keterangan'] or '-'), cell_style)
                     ])
                 
-                # Proporsi Kolom Aman Kertas Letter (Total lebar 552)
                 col_widths = [62, 48, 65, 95, 75, 60, 147]
                 t = Table(table_data, colWidths=col_widths, repeatRows=1)
                 t.setStyle(TableStyle([
@@ -344,7 +338,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT (FORMAT DD-MM-YYYY)
+# 3. MENU: RIWAYAT
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 5px;'>📋 Riwayat Buku Kas</p>", unsafe_allow_html=True)
     if df_trans.empty:
@@ -358,7 +352,6 @@ elif st.session_state.menu_aktif == 'riwayat':
         html_rows = ""
         for index, row in df_tampil.iterrows():
             cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
-            # Format Tanggal Aplikasi Diubah ke DD-MM-YYYY
             tgl_format = row['tanggal'].strftime('%d-%m-%Y')
             ket_isi = row['keterangan'] if row['keterangan'] else '-'
             
@@ -377,7 +370,6 @@ elif st.session_state.menu_aktif == 'riwayat':
                      f"</tr></thead><tbody>{html_rows}</tbody></table></div>"
         st.markdown(tabel_html, unsafe_allow_html=True)
         
-        # PANEL EDIT DATA
         st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 10px 0;'>", unsafe_allow_html=True)
         opsi_pilih = {row['id_transaksi']: f"[{row['tanggal'].strftime('%d-%m-%Y')}] - {row['jenis']} - {row['kategori']}" for _, row in df_tampil.iterrows()}
         if opsi_pilih:
@@ -461,13 +453,11 @@ elif st.session_state.menu_aktif == 'rekap':
                 fig.update_traces(text=None)
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-# 5. MENU: WALLET (BERSIH TOTAL & ANTI BOCOR)
+# 5. MENU: WALLET
 elif st.session_state.menu_aktif == 'wallet':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 8px;'>💳 Sisa Saldo per Wallet</p>", unsafe_allow_html=True)
     
-    # 1. Mulai container baris pembungkus kapsul
     wallet_html = "<div style='display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start;'>"
-    
     for w_name in LIST_WALLET:
         w_bal = wallet_balances.get(w_name, 0)
         
@@ -480,16 +470,11 @@ elif st.session_state.menu_aktif == 'wallet':
             bg_c = "rgba(184, 134, 11, 0.08)"
             text_c = "inherit"
             
-        # 2. Gabungkan string kapsul ke dalam satu variabel tunggal
         wallet_html += f"""
         <div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'>
             <span style='font-weight: bold; color: {border_c};'>{w_name}:</span> 
             <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span>
         </div>
         """
-        
-    # 3. Tutup container pembungkus setelah loop selesai
     wallet_html += "</div>"
-    
-    # 4. Cetak sekali saja ke layar secara aman
     st.markdown(wallet_html, unsafe_allow_html=True)
