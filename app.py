@@ -461,22 +461,32 @@ elif st.session_state.menu_aktif == 'rekap':
                 fig.update_traces(text=None)
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-# 5. MENU: WALLET
+# 5. MENU: WALLET (SUPER MINI, LIST COMPACT KHUSUS HP)
 elif st.session_state.menu_aktif == 'wallet':
-    st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 10px;'>💳 Saldo Berjalan per Wallet</p>", unsafe_allow_html=True)
-    for i in range(0, len(LIST_WALLET), 2):
-        cols = st.columns(2)
-        for j in range(2):
-            if i + j < len(LIST_WALLET):
-                w_name = LIST_WALLET[i + j]
-                w_bal = wallet_balances[w_name]
-                bg_color = "#8B0000" if w_bal < 0 else "#000000"
-                border_color = "#8B0000" if w_bal < 0 else "#B8860B"
-                text_amount_color = "#FFFFFF" if w_bal < 0 else "#FFD700"
-                
-                cols[j].markdown(f"""
-                    <div style='background-color: {bg_color}; padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 2px solid {border_color}; text-align:center;'>
-                        <p style='margin:0; font-size:12px; font-weight:bold; color: #FFFFFF;'>{w_name}</p>
-                        <p style='margin:3px 0 0 0; font-size:15px; font-weight:900; color: {text_amount_color};'>Rp {w_bal:,.0f}</p>
-                    </div>
-                """, unsafe_allow_html=True)
+    st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 8px;'>💳 Sisa Saldo per Wallet</p>", unsafe_allow_html=True)
+    
+    # Membuat container flexbox agar label dompet kecil-kecil berjejer hemat tempat
+    wallet_html = "<div style='display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start;'>"
+    
+    for w_name in LIST_WALLET:
+        w_bal = wallet_balances[w_name]
+        
+        # Penentuan warna teks adaptif: merah tebal kalau minus, gold/hijau kalau aman
+        if w_bal < 0:
+            border_c = "#c62828"
+            bg_c = "rgba(198, 40, 40, 0.1)"
+            text_c = "#c62828"
+        else:
+            border_c = "#B8860B"
+            bg_c = "rgba(184, 134, 11, 0.08)"
+            text_c = "inherit" # Ikut warna tema dark/light mode agar krispi
+            
+        wallet_html += f"""
+            <div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'>
+                <span style='font-weight: bold; color: {border_c};'>{w_name}:</span> 
+                <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span>
+            </div>
+        """
+        
+    wallet_html += "</div>"
+    st.markdown(wallet_html, unsafe_allow_html=True)
