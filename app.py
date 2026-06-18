@@ -214,7 +214,7 @@ st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px; border-color: #8B
 
 # --- LOGIKA KONTEN MENU ---
 
-# 1. MENU: TAMBAH (DENGAN INPUT REIMBURSE)
+# 1. MENU: TAMBAH (REIMBURSE HANYA UNTUK PENGELUARAN)
 if st.session_state.menu_aktif == 'tambah':
     st.markdown("<h4 style='color: #8B0000;'>➕ Tambah Transaksi Baru</h4>", unsafe_allow_html=True)
     jenis_tx = st.radio("Pilih Jenis Aliran Dana:", ["Pengeluaran", "Pemasukan"], horizontal=True)
@@ -225,9 +225,12 @@ if st.session_state.menu_aktif == 'tambah':
         kat = st.selectbox("Kategori", KAT_PENGELUARAN if jenis_tx == "Pengeluaran" else KAT_PEMASUKAN)
         jml = st.number_input("Jumlah Nominal (Rp)", min_value=0, step=1000)
         
-        # BARIS REIMBURSE BARU TEPAT DI ATAS KETERANGAN
-        remb = st.radio("Reimburse:", ["Tidak", "Ya"], horizontal=True)
-        
+        # KONDISI: Opsi Reimburse hanya muncul jika jenis_tx adalah "Pengeluaran"
+        if jenis_tx == "Pengeluaran":
+            remb = st.radio("Reimburse:", ["Tidak", "Ya"], horizontal=True)
+        else:
+            remb = "Tidak"  # Default otomatis 'Tidak' jika memilih Pemasukan tanpa memunculkan inputnya
+            
         ket = st.text_input("Keterangan Tambahan")
         
         simpan = st.form_submit_button("Simpan Catatan")
@@ -241,7 +244,10 @@ if st.session_state.menu_aktif == 'tambah':
                     )
                 conn.commit()
                 conn.close()
-                st.success(f"Berhasil menyimpan {jenis_tx} sebesar Rp {jml:,.0f} [Reimburse: {remb}]")
+                
+                # Pesan sukses menyesuaikan info reimburse
+                info_remb = f" [Reimburse: {remb}]" if jenis_tx == "Pengeluaran" else ""
+                st.success(f"Berhasil menyimpan {jenis_tx} sebesar Rp {jml:,.0f}{info_remb}")
                 st.rerun()
             else:
                 st.error("Jumlah input harus lebih besar dari Rp 0!")
