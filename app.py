@@ -2,7 +2,7 @@ import streamlit as st
 import pymysql
 import pandas as pd
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.express as px
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
