@@ -85,7 +85,7 @@ st.markdown("""
     .custom-table td {
         padding: 8px 6px;
         border-bottom: 1px solid rgba(139, 0, 0, 0.1);
-        color: #222222;
+        color: inherit !important;
     }
     .badge-masuk { color: #2e7d32; font-weight: bold; }
     .badge-keluar { color: #c62828; font-weight: bold; }
