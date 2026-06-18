@@ -382,6 +382,8 @@ elif st.session_state.menu_aktif == 'riwayat':
             </table>
         </div>
         """
+        # HANYA RENDER MENGGUNAKAN MARKDOWN SEPERTI DI BAWAH INI
+        # JANGAN ADA st.write(html_rows) DI ATAS ATAU DI BAWAH BARIS INI!
         st.markdown(tabel_html, unsafe_allow_html=True)
         st.write("")
         
