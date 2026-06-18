@@ -150,8 +150,8 @@ ALL_KATEGORI = list(set(KAT_PENGELUARAN + KAT_PEMASUKAN))
 # --- JUDUL UTAMA & SUB-JUDUL TEMA BARU (SINKRON, MEPET & ANTI TUMPANG TINDIH) ---
 st.markdown("""
     <div style='text-align: center; margin-bottom: 15px;'>
-        <div style='font-size: 20px; font-weight: 800; color: #8B0000; letter-spacing: 0.5px; margin: 0; padding: 0; line-height: 1.2;'>Informasi Keuangan Kei</div>
-        <div style='font-size: 13px; color: var(--text-color); font-weight: 500; opacity: 0.75; letter-spacing: 0.3px; margin-top: 2px; padding: 0;'>HARUS CATAT SETIAP SAAT</div>
+        <div style='font-family: "Times New Roman", Georgia, serif; font-size: 22px; font-weight: bold; font-style: italic; color: #111111; margin: 0; padding: 0; line-height: 1.2;'>Informasi Keuangan Kei</div>
+        <div style='font-size: 11px; color: var(--text-color); font-weight: 500; opacity: 0.6; letter-spacing: 1px; margin-top: 4px; padding: 0;'>HARUS CATAT SETIAP SAAT</div>
     </div>
 """, unsafe_allow_html=True)
 
