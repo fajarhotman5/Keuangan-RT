@@ -336,7 +336,7 @@ elif st.session_state.menu_aktif == 'unduh':
                     use_container_width=True
                 )
 
-# 3. MENU: RIWAYAT
+# 3. MENU: RIWAYAT (ELESAN MODERN & TOMBOL TINDAKAN LANGSUNG DI TABEL)
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 5px;'>📋 Riwayat Buku Kas</p>", unsafe_allow_html=True)
     if df_trans.empty:
@@ -347,37 +347,67 @@ elif st.session_state.menu_aktif == 'riwayat':
         if cari:
             df_tampil = df_tampil[df_tampil['kategori'].str.contains(cari, case=False, na=False) | df_tampil['keterangan'].str.contains(cari, case=False, na=False)]
         
-        html_rows = ""
+        # Buat columns Streamlit untuk meniru header tabel data + tindakan
+        st.markdown("""
+            <style>
+            .table-hdr {
+                color: #8B0000; font-weight: 700; font-size: 11px; 
+                border-bottom: 2px solid #8B0000; padding: 4px 0; text-transform: uppercase;
+            }
+            .table-cell {
+                font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+                display: flex; align-items: center; min-height: 35px;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Header Kompak Tanpa Kolom Aliran
+        h_col1, h_col2, h_col3, h_col4, h_col5, h_col6 = st.columns([1.5, 1.8, 2.2, 2.3, 1.2, 2.0])
+        h_col1.markdown("<div class='table-hdr'>Tanggal</div>", unsafe_allow_html=True)
+        h_col2.markdown("<div class='table-hdr'>Wallet</div>", unsafe_allow_html=True)
+        h_col3.markdown("<div class='table-hdr'>Kategori</div>", unsafe_allow_html=True)
+        h_col4.markdown("<div class='table-hdr'>Nominal</div>", unsafe_allow_html=True)
+        h_col5.markdown("<div class='table-hdr'>Reimb</div>", unsafe_allow_html=True)
+        h_col6.markdown("<div class='table-hdr'>Tindakan</div>", unsafe_allow_html=True)
+
+        # Isi Baris Data Berjejer dengan Tombol Aksi
         for index, row in df_tampil.iterrows():
-            cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
             tgl_format = row['tanggal'].strftime('%d-%m-%Y')
-            ket_isi = row['keterangan'] if row['keterangan'] else '-'
+            color_price = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
+            sign_price = "+" if row['jenis'] == "Pemasukan" else "-"
             
-            html_rows += f"<tr>" \
-                         f"<td>{tgl_format}</td>" \
-                         f"<td><span class='{cls_jenis}'>{row['jenis']}</span></td>" \
-                         f"<td>{row['wallet']}</td>" \
-                         f"<td>{row['kategori']}</td>" \
-                         f"<td><b>Rp {row['jumlah']:,.0f}</b></td>" \
-                         f"<td>{row.get('reimburse', 'Tidak')}</td>" \
-                         f"<td>{ket_isi}</td>" \
-                         f"</tr>"
+            r_col1, r_col2, r_col3, r_col4, r_col5, r_col6 = st.columns([1.5, 1.8, 2.2, 2.3, 1.2, 2.0])
             
-        tabel_html = f"<div class='table-container'><table class='custom-table'><thead><tr>" \
-                     f"<th>Tanggal</th><th>Aliran</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th>" \
-                     f"</tr></thead><tbody>{html_rows}</tbody></table></div>"
-        st.markdown(tabel_html, unsafe_allow_html=True)
-        
-        st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 10px 0;'>", unsafe_allow_html=True)
-        opsi_pilih = {row['id_transaksi']: f"[{row['tanggal'].strftime('%d-%m-%Y')}] - {row['jenis']} - {row['kategori']}" for _, row in df_tampil.iterrows()}
-        if opsi_pilih:
-            id_terpilih = st.selectbox("Pilih data untuk Edit/Hapus:", options=list(opsi_pilih.keys()), format_func=lambda x: opsi_pilih[x])
-            if id_terpilih:
-                data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
-                mode_aksi = st.radio("Tindakan:", ["📝 Edit Data", "🗑️ Hapus Permanen"], horizontal=True)
+            r_col1.markdown(f"<div class='table-cell'>{tgl_format}</div>", unsafe_allow_html=True)
+            r_col2.markdown(f"<div class='table-cell'>{row['wallet']}</div>", unsafe_allow_html=True)
+            r_col3.markdown(f"<div class='table-cell' title='{row['keterangan'] or ''}'>{row['kategori']}</div>", unsafe_allow_html=True)
+            r_col4.markdown(f"<div class='table-cell' style='color:{color_price}; font-weight:700;'>{sign_price}Rp {row['jumlah']:,.0f}</div>", unsafe_allow_html=True)
+            r_col5.markdown(f"<div class='table-cell'>{row.get('reimburse', 'Tidak')}</div>", unsafe_allow_html=True)
+            
+            # Kolom Tindakan Khusus: Pasang Tombol Kecil Berdampingan (📝 & 🗑️)
+            with r_col6:
+                btn_space1, btn_space2 = st.columns(2)
+                with btn_space1:
+                    if st.button("📝", key=f"edt_{row['id_transaksi']}", use_container_width=True):
+                        st.session_state.id_edit_aktif = row['id_transaksi']
+                        st.session_state.mode_riwayat = "edit"
+                with btn_space2:
+                    if st.button("🗑️", key=f"del_{row['id_transaksi']}", use_container_width=True):
+                        st.session_state.id_edit_aktif = row['id_transaksi']
+                        st.session_state.mode_riwayat = "hapus"
+
+        # --- JENDELA FORM EDIT / KONFIRMASI HAPUS (MUNCUL HANYA SAAT DIKLIK) ---
+        if 'mode_riwayat' in st.session_state and 'id_edit_aktif' in st.session_state:
+            id_target = st.session_state.id_edit_aktif
+            data_aktif = df_trans[df_trans['id_transaksi'] == id_target]
+            
+            if not data_aktif.empty:
+                data_row = data_aktif.iloc[0]
+                st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 15px 0;'>", unsafe_allow_html=True)
                 
-                if mode_aksi == "📝 Edit Data":
-                    with st.form("form_edit_riwayat"):
+                if st.session_state.mode_riwayat == "edit":
+                    st.markdown(f"<p style='color: #B8860B; font-weight: bold; font-size: 13px;'>📝 Edit Data Transaksi (ID: {id_target})</p>", unsafe_allow_html=True)
+                    with st.form("form_cepat_edit"):
                         new_tgl = st.date_input("Tanggal", data_row['tanggal'])
                         new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(data_row['jenis']))
                         new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
@@ -388,19 +418,33 @@ elif st.session_state.menu_aktif == 'riwayat':
                         new_remb = st.radio("Reimburse:", ["Tidak", "Ya"], index=["Tidak", "Ya"].index(data_row.get('reimburse', 'Tidak')), horizontal=True)
                         new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
                         
-                        if st.form_submit_button("Simpan Perubahan"):
+                        col_ef1, col_ef2 = st.columns(2)
+                        with col_ef1:
+                            if st.form_submit_button("Simpan Perubahan", use_container_width=True):
+                                conn = get_connection()
+                                with conn.cursor() as cursor:
+                                    cursor.execute("UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
+                                                   (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_target))
+                                conn.commit(); conn.close()
+                                del st.session_state.mode_riwayat
+                                st.success("Data berhasil diperbarui!"); st.rerun()
+                        with col_ef2:
+                            if st.form_submit_button("Batal", use_container_width=True):
+                                del st.session_state.mode_riwayat; st.rerun()
+                                
+                elif st.session_state.mode_riwayat == "hapus":
+                    st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:10px; border-radius:8px; border:1px solid #c62828; margin-bottom:10px; font-size:12px; color:#c62828;'>⚠️ <b>Konfirmasi Hapus:</b> Apakah Anda yakin ingin menghapus data <b>{data_row['kategori']} - Rp {data_row['jumlah']:,.0f}</b>?</div>", unsafe_allow_html=True)
+                    col_del1, col_del2 = st.columns(2)
+                    with col_del1:
+                        if st.button("🔴 Ya, Hapus", key="confirm_del_btn", use_container_width=True):
                             conn = get_connection()
-                            with conn.cursor() as cursor:
-                                cursor.execute("UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
-                                               (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih))
+                            with conn.cursor() as cursor: cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_target,))
                             conn.commit(); conn.close()
-                            st.success("Berhasil diperbarui!"); st.rerun()
-                elif mode_aksi == "🗑️ Hapus Permanen":
-                    if st.button("🔴 Ya, Hapus Sekarang", use_container_width=True):
-                        conn = get_connection()
-                        with conn.cursor() as cursor: cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
-                        conn.commit(); conn.close()
-                        st.success("Berhasil dihapus!"); st.rerun()
+                            del st.session_state.mode_riwayat
+                            st.success("Data terhapus!"); st.rerun()
+                    with col_del2:
+                        if st.button("Batal", key="cancel_del_btn", use_container_width=True):
+                            del st.session_state.mode_riwayat; st.rerun()
 
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
