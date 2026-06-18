@@ -218,7 +218,7 @@ if st.session_state.menu_aktif == 'tambah':
     jenis_tx = st.radio("Pilih Jenis Aliran Dana:", ["Pengeluaran", "Pemasukan"], horizontal=True)
     
     with st.form("form_transaksi", clear_on_submit=True):
-        tgl = st.date_input("Tanggal Transaksi", datetime.now())
+        tgl = st.date_input("Tanggal Transaksi", datetime.now(), format="DD-MM-YYYY")
         wlt = st.selectbox("Pilih Wallet / Dompet", LIST_WALLET)
         kat = st.selectbox("Kategori", KAT_PENGELUARAN if jenis_tx == "Pengeluaran" else KAT_PEMASUKAN)
         jml = st.number_input("Jumlah Nominal (Rp)", min_value=0, step=1000)
@@ -253,8 +253,8 @@ elif st.session_state.menu_aktif == 'unduh':
         st.info("Tidak ada data transaksi.")
     else:
         col_d1, col_d2 = st.columns(2)
-        with col_d1: tgl_awal = st.date_input("Mulai Tanggal", df_trans['tanggal'].min(), key="eks_awal")
-        with col_d2: tgl_akhir = st.date_input("Sampai Tanggal", df_trans['tanggal'].max(), key="eks_akhir")
+        with col_d1: tgl_awal = st.date_input("Mulai Tanggal", df_trans['tanggal'].min(), key="eks_awal", format="DD-MM-YYYY")
+        with col_d2: tgl_akhir = st.date_input("Sampai Tanggal", df_trans['tanggal'].max(), key="eks_akhir", format="DD-MM-YYYY")
             
         df_filter = df_trans[(df_trans['tanggal'] >= tgl_awal) & (df_trans['tanggal'] <= tgl_akhir)].copy()
         
@@ -456,7 +456,7 @@ elif st.session_state.menu_aktif == 'riwayat':
         # ==========================================
         html_mobile_cards = ""
         for index, row in df_tampil.iterrows():
-            tgl_mini = row['tanggal'].strftime('%d-%m-%Y')
+            tgl_mini = row['tanggal'].strftime('%d-%m')
             color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
             sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
             rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
@@ -471,8 +471,8 @@ elif st.session_state.menu_aktif == 'rekap':
         st.info("Belum ada data transaksi.")
     else:
         col_r1, col_r2 = st.columns(2)
-        with col_r1: rekap_awal = st.date_input("Dari", df_trans['tanggal'].min(), key="rk_awal")
-        with col_r2: rekap_akhir = st.date_input("Sampai", df_trans['tanggal'].max(), key="rk_akhir")
+        with col_r1: rekap_awal = st.date_input("Dari", df_trans['tanggal'].min(), key="rk_awal", format="DD-MM-YYYY")
+        with col_r2: rekap_akhir = st.date_input("Sampai", df_trans['tanggal'].max(), key="rk_akhir", format="DD-MM-YYYY")
             
         df_rk = df_trans[(df_trans['tanggal'] >= rekap_awal) & (df_trans['tanggal'] <= rekap_akhir)].copy()
         if df_rk.empty:
