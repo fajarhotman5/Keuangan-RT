@@ -59,7 +59,7 @@ st.markdown("""
     }
     .custom-table {
         width: 100%;
-        min-width: 600px; /* Memastikan kolom tidak terlalu berhimpitan di layar HP kecil */
+        min-width: 650px; /* Memastikan kolom tidak terlalu berhimpitan di layar HP kecil */
         border-collapse: collapse;
         font-size: 13px;
         text-align: left;
@@ -89,26 +89,11 @@ st.markdown("""
 
     /* --- BREAKPOINT RESPONSIVITAS (MEDIA QUERIES) --- */
     @media (max-width: 768px) {
-        /* Ukuran Header Utama pada HP/Tablet */
-        .header-title {
-            font-size: 24px !important;
-        }
-        .header-subtitle {
-            font-size: 12px !important;
-        }
-        
-        /* Kartu Metrik di HP agar teks nominal tidak terpotong */
-        .metric-card p {
-            font-size: 12px !important;
-        }
-        .metric-card h3 {
-            font-size: 18px !important;
-        }
-        
-        /* Mengurangi padding form di device mobile */
-        div[data-testid="stForm"] {
-            padding: 10px;
-        }
+        .header-title { font-size: 24px !important; }
+        .header-subtitle { font-size: 12px !important; }
+        .metric-card p { font-size: 12px !important; }
+        .metric-card h3 { font-size: 18px !important; }
+        div[data-testid="stForm"] { padding: 10px; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -140,9 +125,16 @@ def init_db():
                 wallet VARCHAR(30) NOT NULL,
                 kategori VARCHAR(50) NOT NULL,
                 jumlah BIGINT NOT NULL DEFAULT 0,
+                reimburse VARCHAR(10) NOT NULL DEFAULT 'Tidak',
                 keterangan TEXT
             )
         """)
+        
+        # Pengecekan aman: Jika kolom 'reimburse' belum ada di tabel lama, tambahkan otomatis
+        cursor.execute("SHOW COLUMNS FROM transaksi LIKE 'reimburse'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE transaksi ADD COLUMN reimburse VARCHAR(10) NOT NULL DEFAULT 'Tidak' AFTER jumlah")
+            
     conn.commit()
     conn.close()
 
@@ -183,7 +175,7 @@ else:
     total_keluar = 0
     wallet_balances = {w: 0 for w in LIST_WALLET}
 
-# --- BARIS PERTAMA: KARTU METRIK RESPONSIF ---
+# --- BARIS PERTAMA: KARTU METRIK ---
 col_s1, col_s2 = st.columns(2)
 with col_s1:
     st.markdown(f"""
@@ -222,7 +214,7 @@ st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px; border-color: #8B
 
 # --- LOGIKA KONTEN MENU ---
 
-# 1. MENU: TAMBAH
+# 1. MENU: TAMBAH (DENGAN INPUT REIMBURSE)
 if st.session_state.menu_aktif == 'tambah':
     st.markdown("<h4 style='color: #8B0000;'>➕ Tambah Transaksi Baru</h4>", unsafe_allow_html=True)
     jenis_tx = st.radio("Pilih Jenis Aliran Dana:", ["Pengeluaran", "Pemasukan"], horizontal=True)
@@ -232,6 +224,10 @@ if st.session_state.menu_aktif == 'tambah':
         wlt = st.selectbox("Pilih Wallet / Dompet", LIST_WALLET)
         kat = st.selectbox("Kategori", KAT_PENGELUARAN if jenis_tx == "Pengeluaran" else KAT_PEMASUKAN)
         jml = st.number_input("Jumlah Nominal (Rp)", min_value=0, step=1000)
+        
+        # BARIS REIMBURSE BARU TEPAT DI ATAS KETERANGAN
+        remb = st.radio("Reimburse:", ["Tidak", "Ya"], horizontal=True)
+        
         ket = st.text_input("Keterangan Tambahan")
         
         simpan = st.form_submit_button("Simpan Catatan")
@@ -240,12 +236,12 @@ if st.session_state.menu_aktif == 'tambah':
                 conn = get_connection()
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO transaksi (jenis, tanggal, wallet, kategori, jumlah, keterangan) VALUES (%s, %s, %s, %s, %s, %s)",
-                        (jenis_tx, tgl, wlt, kat, jml, ket)
+                        "INSERT INTO transaksi (jenis, tanggal, wallet, kategori, jumlah, reimburse, keterangan) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (jenis_tx, tgl, wlt, kat, jml, remb, ket)
                     )
                 conn.commit()
                 conn.close()
-                st.success(f"Berhasil menyimpan {jenis_tx} sebesar Rp {jml:,.0f}")
+                st.success(f"Berhasil menyimpan {jenis_tx} sebesar Rp {jml:,.0f} [Reimburse: {remb}]")
                 st.rerun()
             else:
                 st.error("Jumlah input harus lebih besar dari Rp 0!")
@@ -257,10 +253,8 @@ elif st.session_state.menu_aktif == 'unduh':
         st.info("Tidak ada data transaksi yang dapat diekspor.")
     else:
         col_d1, col_d2 = st.columns(2)
-        with col_d1:
-            tgl_awal = st.date_input("Mulai Tanggal", df_trans['tanggal'].min())
-        with col_d2:
-            tgl_akhir = st.date_input("Sampai Tanggal", df_trans['tanggal'].max())
+        with col_d1: tgl_awal = st.date_input("Mulai Tanggal", df_trans['tanggal'].min())
+        with col_d2: tgl_akhir = st.date_input("Sampai Tanggal", df_trans['tanggal'].max())
             
         df_filter = df_trans[(df_trans['tanggal'] >= tgl_awal) & (df_trans['tanggal'] <= tgl_akhir)].copy()
         
@@ -268,12 +262,10 @@ elif st.session_state.menu_aktif == 'unduh':
             st.warning("Data kosong untuk rentang tanggal tersebut.")
         else:
             col_b1, col_b2 = st.columns(2)
-            
             with col_b1:
                 buffer_xl = io.BytesIO()
                 with pd.ExcelWriter(buffer_xl, engine='openpyxl') as writer:
                     df_filter.to_excel(writer, index=False, sheet_name='Laporan')
-                
                 st.download_button(
                     label="🟢 Unduh File Excel",
                     data=buffer_xl.getvalue(),
@@ -281,12 +273,10 @@ elif st.session_state.menu_aktif == 'unduh':
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
-                
             with col_b2:
                 buffer_pdf = io.BytesIO()
-                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=54, leftMargin=54, topMargin=72, bottomMargin=72)
+                doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=54, bottomMargin=54)
                 story = []
-                
                 styles = getSampleStyleSheet()
                 title_style = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#8B0000'), alignment=1, spaceAfter=20)
                 sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#000000'), alignment=1, spaceAfter=20)
@@ -297,7 +287,7 @@ elif st.session_state.menu_aktif == 'unduh':
                 story.append(Paragraph(f"Periode: {tgl_awal.strftime('%d/%m/%Y')} s/d {tgl_akhir.strftime('%d/%m/%Y')}", sub_style))
                 story.append(Spacer(1, 10))
                 
-                table_data = [[Paragraph("Jenis", header_style), Paragraph("Tanggal", header_style), Paragraph("Wallet", header_style), Paragraph("Kategori", header_style), Paragraph("Jumlah (Rp)", header_style), Paragraph("Keterangan", header_style)]]
+                table_data = [[Paragraph("Jenis", header_style), Paragraph("Tanggal", header_style), Paragraph("Wallet", header_style), Paragraph("Kategori", header_style), Paragraph("Nominal", header_style), Paragraph("Reimburse", header_style), Paragraph("Keterangan", header_style)]]
                 
                 for _, row in df_filter.iterrows():
                     table_data.append([
@@ -306,102 +296,65 @@ elif st.session_state.menu_aktif == 'unduh':
                         Paragraph(str(row['wallet']), cell_style),
                         Paragraph(str(row['kategori']), cell_style),
                         Paragraph(f"{row['jumlah']:,.0f}", cell_style),
+                        Paragraph(str(row.get('reimburse', 'Tidak')), cell_style),
                         Paragraph(str(row['keterangan'] or '-'), cell_style)
                     ])
                 
-                col_widths = [65, 60, 60, 95, 74, 150] 
+                col_widths = [60, 55, 55, 90, 65, 55, 145] 
                 t = Table(table_data, colWidths=col_widths, repeatRows=1)
                 t.setStyle(TableStyle([
                     ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
                     ('ALIGN', (0,0), (-1,-1), 'LEFT'),
                     ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                    ('BOTTOMPADDING', (0,0), (-1,0), 6),
-                    ('TOPPADDING', (0,0), (-1,0), 6),
                     ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
                     ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')])
                 ]))
                 story.append(t)
                 doc.build(story, canvasmaker=canvas.Canvas)
-                
-                st.download_button(
-                    label="🔴 Unduh File PDF",
-                    data=buffer_pdf.getvalue(),
-                    file_name=f"Laporan_Keuangan_{tgl_awal}_{tgl_akhir}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
+                st.download_button(label="🔴 Unduh File PDF", data=buffer_pdf.getvalue(), file_name=f"Laporan_{tgl_awal}_{tgl_akhir}.pdf", mime="application/pdf", use_container_width=True)
 
-# 3. MENU: RIWAYAT (RESPONSIF & BEBAS BOCOR HTML)
+# 3. MENU: RIWAYAT
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<h4 style='color: #8B0000;'>📋 Riwayat Buku Kas</h4>", unsafe_allow_html=True)
-    
     if df_trans.empty:
         st.info("Belum ada mutasi/transaksi tercatat.")
     else:
         cari = st.text_input("🔍 Filter Pencarian Cepat (Kategori / Keterangan):", key="cari_riwayat")
         df_tampil = df_trans.copy()
         if cari:
-            df_tampil = df_tampil[
-                df_tampil['kategori'].str.contains(cari, case=False, na=False) | 
-                df_tampil['keterangan'].str.contains(cari, case=False, na=False)
-            ]
+            df_tampil = df_tampil[df_tampil['kategori'].str.contains(cari, case=False, na=False) | df_tampil['keterangan'].str.contains(cari, case=False, na=False)]
         
-        # JANGAN BERI SPASI/TAB DI AWAL BARIS STRING HTML AGAR TIDAK TERBACA SEBAGAI CODE BLOCK
         html_rows = ""
         for index, row in df_tampil.iterrows():
             cls_jenis = "badge-masuk" if row['jenis'] == "Pemasukan" else "badge-keluar"
             tgl_format = row['tanggal'].strftime('%d/%m/%Y')
-            keterangan_isi = row['keterangan'] if row['keterangan'] else '-'
+            val_remb = row.get('reimburse', 'Tidak')
+            ket_isi = row['keterangan'] if row['keterangan'] else '-'
             
-            # Penggabungan string rapat tanpa indentasi spasi di awal baris
             html_rows += f"<tr>" \
                          f"<td>{tgl_format}</td>" \
                          f"<td><span class='{cls_jenis}'>{row['jenis']}</span></td>" \
                          f"<td>{row['wallet']}</td>" \
                          f"<td>{row['kategori']}</td>" \
                          f"<td><b>Rp {row['jumlah']:,.0f}</b></td>" \
-                         f"<td>{keterangan_isi}</td>" \
+                         f"<td>{val_remb}</td>" \
+                         f"<td>{ket_isi}</td>" \
                          f"</tr>"
             
-        tabel_html = f"<div class='table-container'>" \
-                     f"<table class='custom-table'>" \
-                     f"<thead>" \
-                     f"<tr>" \
-                     f"<th>Tanggal</th>" \
-                     f"<th>Aliran</th>" \
-                     f"<th>Wallet</th>" \
-                     f"<th>Kategori</th>" \
-                     f"<th>Nominal</th>" \
-                     f"<th>Keterangan</th>" \
-                     f"</tr>" \
-                     f"</thead>" \
-                     f"<tbody>" \
-                     f"{html_rows}" \
-                     f"</tbody>" \
-                     f"</table>" \
-                     f"</div>"
+        tabel_html = f"<div class='table-container'><table class='custom-table'><thead><tr>" \
+                     f"<th>Tanggal</th><th>Aliran</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th>" \
+                     f"</tr></thead><tbody>{html_rows}</tbody></table></div>"
                      
-        # Render langsung ke layar secara aman
         st.markdown(tabel_html, unsafe_allow_html=True)
         st.write("")
         
-        # --- PANEL PERBAIKAN DATA (EDIT & HAPUS) ---
+        # --- PANEL EDIT & HAPUS ---
         st.markdown("<hr style='border-top: 1px dashed #8B0000; margin: 15px 0;'>", unsafe_allow_html=True)
         st.markdown("<p style='font-size: 13px; font-weight: bold; color: #8B0000; margin-bottom: 5px;'>🔧 Panel Perbaikan Data</p>", unsafe_allow_html=True)
         
-        opsi_pilih = {
-            row['id_transaksi']: f"[{row['tanggal'].strftime('%d/%m/%Y')}] - {row['jenis']} - {row['kategori']} - Rp {row['jumlah']:,.0f}"
-            for _, row in df_tampil.iterrows()
-        }
-        
+        opsi_pilih = {row['id_transaksi']: f"[{row['tanggal'].strftime('%d/%m/%Y')}] - {row['jenis']} - {row['kategori']} - Rp {row['jumlah']:,.0f}" for _, row in df_tampil.iterrows()}
         if opsi_pilih:
-            id_terpilih = st.selectbox(
-                "Pilih baris data transaksi yang ingin diubah/dihapus:", 
-                options=list(opsi_pilih.keys()), 
-                format_func=lambda x: opsi_pilih[x],
-                key="pilih_id_edit"
-            )
-            
+            id_terpilih = st.selectbox("Pilih baris data transaksi yang ingin diubah/dihapus:", options=list(opsi_pilih.keys()), format_func=lambda x: opsi_pilih[x], key="pilih_id_edit")
             if id_terpilih:
                 data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
                 mode_aksi = st.radio("Pilih Tindakan:", ["📝 Edit Data", "🗑️ Hapus Permanen"], horizontal=True)
@@ -415,11 +368,14 @@ elif st.session_state.menu_aktif == 'riwayat':
                             new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
                         with col_e2:
                             list_kat_opsi = KAT_PEMASUKAN if new_jenis == "Pemasukan" else KAT_PENGELUARAN
-                            if data_row['kategori'] not in list_kat_opsi:
-                                list_kat_opsi = list_kat_opsi + [data_row['kategori']]
+                            if data_row['kategori'] not in list_kat_opsi: list_kat_opsi = list_kat_opsi + [data_row['kategori']]
                             new_kat = st.selectbox("Kategori", list_kat_opsi, index=list_kat_opsi.index(data_row['kategori']))
                             new_jml = st.number_input("Nominal (Rp)", min_value=0, value=int(data_row['jumlah']), step=1000)
-                            new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
+                            
+                        # Input Reimburse pada Form Edit
+                        current_remb = data_row.get('reimburse', 'Tidak')
+                        new_remb = st.radio("Reimburse:", ["Tidak", "Ya"], index=["Tidak", "Ya"].index(current_remb), horizontal=True)
+                        new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
                         
                         sub_edit = st.form_submit_button("Simpan Perubahan")
                         if sub_edit:
@@ -427,103 +383,61 @@ elif st.session_state.menu_aktif == 'riwayat':
                             with conn.cursor() as cursor:
                                 cursor.execute("""
                                     UPDATE transaksi 
-                                    SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, keterangan=%s 
+                                    SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s 
                                     WHERE id_transaksi=%s
-                                """, (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_ket, id_terpilih))
+                                """, (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih))
                             conn.commit()
                             conn.close()
                             st.success("Transaksi berhasil diperbarui!")
                             st.rerun()
                             
                 elif mode_aksi == "🗑️ Hapus Permanen":
-                    st.warning("Apakah Anda yakin ingin menghapus data ini secara permanen dari database?")
+                    st.warning("Apakah Anda yakin ingin menghapus data ini?")
                     if st.button("🔴 Ya, Hapus Sekarang", use_container_width=True):
                         conn = get_connection()
-                        with conn.cursor() as cursor:
-                            cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
-                        conn.commit()
-                        conn.close()
-                        st.success("Transaksi berhasil dihapus!")
-                        st.rerun()
+                        with conn.cursor() as cursor: cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
+                        conn.commit(); conn.close()
+                        st.success("Transaksi berhasil dihapus!"); st.rerun()
 
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
     st.markdown("<h4 style='color: #8B0000;'>📊 Analisis Rekapitulasi</h4>", unsafe_allow_html=True)
-    
     if df_trans.empty:
         st.info("Belum ada data transaksi untuk dihitung.")
     else:
         col_r1, col_r2 = st.columns(2)
-        with col_r1:
-            rekap_awal = st.date_input("Mulai", df_trans['tanggal'].min(), key="rk_awal")
-        with col_r2:
-            rekap_akhir = st.date_input("Selesai", df_trans['tanggal'].max(), key="rk_akhir")
+        with col_r1: rekap_awal = st.date_input("Mulai", df_trans['tanggal'].min(), key="rk_awal")
+        with col_r2: rekap_akhir = st.date_input("Selesai", df_trans['tanggal'].max(), key="rk_akhir")
             
         df_rk = df_trans[(df_trans['tanggal'] >= rekap_awal) & (df_trans['tanggal'] <= rekap_akhir)]
-        
         rk_masuk = df_rk[df_rk['jenis'] == 'Pemasukan']['jumlah'].sum()
         rk_keluar = df_rk[df_rk['jenis'] == 'Pengeluaran']['jumlah'].sum()
         
         col_card1, col_card2 = st.columns(2)
         with col_card1:
-            st.markdown(f"""
-                <div class='metric-card' style='background-color: #000000; padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #B8860B; margin-bottom: 10px;'>
-                    <span style='font-size: 11px; color: #FFFFFF; font-weight: bold;'>Total Income Terfilter</span>
-                    <h5 style='margin: 2px 0 0 0; color: #FFD700; font-weight: 800;'>Rp {rk_masuk:,.0f}</h5>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-card' style='background-color: #000000; padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #B8860B; margin-bottom: 10px;'><span style='font-size: 11px; color: #FFFFFF; font-weight: bold;'>Total Income Terfilter</span><h5 style='margin: 2px 0 0 0; color: #FFD700; font-weight: 800;'>Rp {rk_masuk:,.0f}</h5></div>", unsafe_allow_html=True)
         with col_card2:
-            st.markdown(f"""
-                <div class='metric-card' style='background-color: #8B0000; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px;'>
-                    <span style='font-size: 11px; color: #FFFFFF; font-weight: bold;'>Total Outcome Terfilter</span>
-                    <h5 style='margin: 2px 0 0 0; color: #FFFFFF; font-weight: 800;'>Rp {rk_keluar:,.0f}</h5>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"<div class='metric-card' style='background-color: #8B0000; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px;'><span style='font-size: 11px; color: #FFFFFF; font-weight: bold;'>Total Outcome Terfilter</span><h5 style='margin: 2px 0 0 0; color: #FFFFFF; font-weight: 800;'>Rp {rk_keluar:,.0f}</h5></div>", unsafe_allow_html=True)
             
-        st.write("")
-        
         df_chart_rk = df_rk[df_rk['jenis'] == 'Pengeluaran'].groupby('kategori')['jumlah'].sum().reset_index()
-        
         if df_chart_rk.empty:
             st.info("Tidak ada data pengeluaran dalam rentang tanggal ini.")
         else:
             df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=True)
-            
-            fig = px.bar(
-                df_chart_rk,
-                x='jumlah',
-                y='kategori',
-                orientation='h',
-                text='jumlah',
-                color_discrete_sequence=['#8B0000']
-            )
-            
-            fig.update_traces(
-                texttemplate='Rp %{text:,.0f}',
-                textposition='inside',
-                insidetextanchor='end'
-            )
-            
-            fig.update_layout(
-                xaxis_title="Jumlah Pengeluaran (Rp)",
-                yaxis_title="",
-                margin=dict(t=10, b=10, l=10, r=10),
-                height=350,
-                showlegend=False
-            )
+            fig = px.bar(df_chart_rk, x='jumlah', y='kategori', orientation='h', text='jumlah', color_discrete_sequence=['#8B0000'])
+            fig.update_traces(texttemplate='Rp %{text:,.0f}', textposition='inside', insidetextanchor='end')
+            fig.update_layout(xaxis_title="Jumlah Pengeluaran (Rp)", yaxis_title="", margin=dict(t=10, b=10, l=10, r=10), height=350, showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
 
 # 5. MENU: WALLET
 elif st.session_state.menu_aktif == 'wallet':
     st.markdown("<h4 style='color: #8B0000;'>💳 Saldo Berjalan per Wallet</h4>", unsafe_allow_html=True)
-    
     for i in range(0, len(LIST_WALLET), 2):
         cols = st.columns(2)
         for j in range(2):
             if i + j < len(LIST_WALLET):
                 w_name = LIST_WALLET[i + j]
                 w_bal = wallet_balances[w_name]
-                
                 bg_color = "#8B0000" if w_bal < 0 else "#000000"
                 border_color = "#8B0000" if w_bal < 0 else "#B8860B"
                 text_amount_color = "#FFFFFF" if w_bal < 0 else "#FFD700"
