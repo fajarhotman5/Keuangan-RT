@@ -147,11 +147,11 @@ KAT_PENGELUARAN = ['Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Bel
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
 ALL_KATEGORI = list(set(KAT_PENGELUARAN + KAT_PEMASUKAN))
 
-# --- JUDUL UTAMA & SUB-JUDUL TEMA BARU ---
+# --- JUDUL UTAMA & SUB-JUDUL TEMA BARU (MEPET & LEBIH BESAR) ---
 st.markdown("""
     <div style='text-align: center; margin-bottom: 15px;'>
-        <h2 style='margin: 0; font-size: 20px; font-weight: 800; color: #8B0000; letter-spacing: 0.5px;'>Informasi Keuangan Kei</h2>
-        <p style='margin: 2px 0 0 0; font-size: 11px; color: #FFFFFF; font-weight: 500; opacity: 0.9;'>harus catat setiap saat</p>
+        <h2 style='margin: 0px 0px 0px 0px; font-size: 20px; font-weight: 800; color: #8B0000; letter-spacing: 0.5px;'>Informasi Keuangan Kei</h2>
+        <p style='margin: -4px 0px 0px 0px; font-size: 13px; color: #FFFFFF; font-weight: 500; opacity: 0.9;'>Harus catat setiap saat</p>
     </div>
 """, unsafe_allow_html=True)
 
