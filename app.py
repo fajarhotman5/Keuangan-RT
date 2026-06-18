@@ -503,14 +503,37 @@ elif st.session_state.menu_aktif == 'rekap':
                 st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>Reimburse (Ya):</b> <span style='color:#c62828; font-weight:bold;'>Rp {df_rmb[df_rmb['reimburse']=='Ya']['jumlah'].sum():,.0f}</span></p>", unsafe_allow_html=True)
                 st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>Pribadi (Tidak):</b> Rp {df_rmb[df_rmb['reimburse']=='Tidak']['jumlah'].sum():,.0f}</p>", unsafe_allow_html=True)
 
-            st.markdown("<p style='font-size: 12px; font-weight: bold; color: #8B0000; margin-top: 15px; margin-bottom: 2px;'>📉 Tren Pengeluaran</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 12px; font-weight: bold; color: #8B0000; margin-top: 15px; margin-bottom: 2px;'>📊 Tren Pengeluaran per Kategori</p>", unsafe_allow_html=True)
             df_chart_rk = df_rk[df_rk['jenis'] == 'Pengeluaran'].groupby('kategori')['jumlah'].sum().reset_index()
             if df_chart_rk.empty:
                 st.caption("Tidak ada grafik pengeluaran.")
             else:
-                fig = px.bar(df_chart_rk.sort_values(by='jumlah'), x='jumlah', y='kategori', orientation='h', color_discrete_sequence=['#8B0000'])
-                fig.update_layout(xaxis_title=None, yaxis_title=None, margin=dict(t=5, b=5, l=5, r=5), height=170, showlegend=False, font=dict(size=10))
-                fig.update_traces(text=None)
+                # Diubah jadi vertikal (x='kategori', y='jumlah'), warna-warni kalem per kategori, urut dari yang terbesar
+                df_chart_rk = df_chart_rk.sort_values(by='jumlah', ascending=False)
+                fig = px.bar(
+                    df_chart_rk, 
+                    x='kategori', 
+                    y='jumlah', 
+                    text='jumlah',
+                    color='kategori', 
+                    color_discrete_sequence=px.colors.qualitative.Safe
+                )
+                fig.update_layout(
+                    xaxis_title=None, 
+                    yaxis_title=None, 
+                    margin=dict(t=5, b=5, l=5, r=5), 
+                    height=200, 
+                    showlegend=False, # Sembunyikan legenda samping agar pas & gak sempit di HP
+                    font=dict(size=10),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                fig.update_traces(
+                    texttemplate='Rp %{text:,.0f}', 
+                    textposition='inside',
+                    insidetextanchor='middle',
+                    textfont=dict(size=9, color='white', weight='bold')
+                )
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 # 5. MENU: WALLET (RAPAT KIRI - ANTI MARKDOWN CODE BLOCKS)
