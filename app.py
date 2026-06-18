@@ -379,7 +379,7 @@ elif st.session_state.menu_aktif == 'riwayat':
         """, unsafe_allow_html=True)
 
         # ==========================================
-        # LAYOUT 1: TAMPILAN LAPTOP (TABEL ELEGAN SEPERTI DI SCREENSHOT)
+        # LAYOUT 1: TAMPILAN LAPTOP (ANTI REWEL - RAPAT KIRI SATU BARIS)
         # ==========================================
         html_desktop_rows = ""
         for index, row in df_tampil.iterrows():
@@ -388,34 +388,14 @@ elif st.session_state.menu_aktif == 'riwayat':
             sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
             ket_str = row['keterangan'] if row['keterangan'] else "-"
             
-            html_desktop_rows += f"""
-            <tr>
-                <td>{tgl_str}</td>
-                <td>{row['wallet']}</td>
-                <td>{row['kategori']}</td>
-                <td style='color:{color_p}; font-weight:700;'>{sign_p}Rp {row['jumlah']:,.0f}</td>
-                <td>{row.get('reimburse', 'Tidak')}</td>
-                <td>{ket_str}</td>
-                <td style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</td>
-            </tr>
-            """
+            # Kunci: String HTML ditulis lurus tanpa enter agar tidak memicu deteksi Markdown Code otomatis
+            html_desktop_rows += f"<tr><td>{tgl_str}</td><td>{row['wallet']}</td><td>{row['kategori']}</td><td style='color:{color_p}; font-weight:700;'>{sign_p}Rp {row['jumlah']:,.0f}</td><td>{row.get('reimburse', 'Tidak')}</td><td>{ket_str}</td><td style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</td></tr>"
             
-        desktop_html = f"""
-        <div class='desktop-table-container'>
-            <table class='custom-table-v2'>
-                <thead>
-                    <tr>
-                        <th>Tanggal</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th><th>ID</th>
-                    </tr>
-                </thead>
-                <tbody>{html_desktop_rows}</tbody>
-            </table>
-        </div>
-        """
+        desktop_html = f"""<div class='desktop-table-container'><table class='custom-table-v2'><thead><tr><th>Tanggal</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th><th>ID</th></tr></thead><tbody>{html_desktop_rows}</tbody></table></div>"""
         st.markdown(desktop_html, unsafe_allow_html=True)
 
         # ==========================================
-        # LAYOUT 2: TAMPILAN HP (KARTU COMPACT ANTI PECAH)
+        # LAYOUT 2: TAMPILAN HP (ANTI REWEL - CARD MINIMALIS)
         # ==========================================
         html_mobile_cards = ""
         for index, row in df_tampil.iterrows():
@@ -424,18 +404,9 @@ elif st.session_state.menu_aktif == 'riwayat':
             sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
             rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
             
-            html_mobile_cards += f"""
-            <div class='tx-card'>
-                <div class='tx-card-row'>
-                    <span class='tx-card-title'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span>
-                    <span class='tx-card-price' style='color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span>
-                </div>
-                <div class='tx-card-row' style='margin-bottom:0;'>
-                    <span class='tx-card-meta'>📅 {tgl_mini} | 💳 {row['wallet']}</span>
-                    <span class='tx-card-meta' style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</span>
-                </div>
-            </div>
-            """
+            # Kunci: String kartu juga disatukan lurus agar tidak terbaca sebagai Code Block oleh Streamlit
+            html_mobile_cards += f"<div class='tx-card'><div class='tx-card-row'><span class='tx-card-title'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span><span class='tx-card-price' style='color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span></div><div class='tx-card-row' style='margin-bottom:0;'><span class='tx-card-meta'>📅 {tgl_mini} | 💳 {row['wallet']}</span><span class='tx-card-meta' style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</span></div></div>"
+            
         st.markdown(f"<div class='mobile-card-container'>{html_mobile_cards}</div>", unsafe_allow_html=True)
         
         # ==========================================
