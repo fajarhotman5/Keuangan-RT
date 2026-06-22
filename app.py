@@ -235,16 +235,23 @@ if st.session_state.menu_aktif == 'tambah':
         
         if simpan:
             if jml > 0:
-                conn = get_connection()
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        "INSERT INTO transaksi (jenis, tanggal, wallet, kategori, jumlah, reimburse, keterangan) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                        (jenis_tx, tgl, wlt, kat, jml, remb, ket)
-                    )
-                conn.commit()
-                conn.close()
-                st.success("Data berhasil disimpan!")
-                st.rerun()
+                try:
+                    conn = get_connection()
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "INSERT INTO transaksi (jenis, tanggal, wallet, kategori, jumlah, reimburse, keterangan) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                            (jenis_tx, tgl, wlt, kat, jml, remb, ket)
+                        )
+                    conn.commit()
+                    conn.close()
+                    
+                    # Notifikasi modern yang mantap & tidak hilang saat halaman refresh
+                    st.toast("✅ Transaksi baru berhasil disimpan!", icon="💰")
+                    st.success("Data berhasil disimpan!")
+                    st.rerun()
+                except Exception as e:
+                    # Antisipasi jika koneksi database mendadak error/gagal
+                    st.error(f"❌ Gagal menyimpan transaksi: {str(e)}")
             else:
                 st.error("Jumlah input harus lebih besar dari Rp 0!")
 
@@ -421,28 +428,41 @@ elif st.session_state.menu_aktif == 'riwayat':
                         col_ef1, col_ef2 = st.columns(2)
                         with col_ef1:
                             if st.form_submit_button("Simpan", use_container_width=True):
-                                conn = get_connection()
-                                with conn.cursor() as cursor:
-                                    cursor.execute("UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
-                                                   (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih))
-                                conn.commit(); conn.close()
-                                st.success("Berhasil diubah!"); st.rerun()
-                        with col_ef2:
-                            if st.form_submit_button("Batal", use_container_width=True):
-                                st.rerun()
+                                try:
+                                    conn = get_connection()
+                                    with conn.cursor() as cursor:
+                                        cursor.execute("UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
+                                                       (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih))
+                                    conn.commit()
+                                    conn.close()
+                                    
+                                    # Notifikasi Berhasil
+                                    st.toast("✅ Data berhasil diperbarui!", icon="🎉")
+                                    st.success("Berhasil diubah!")
+                                    st.rerun()
+                                except Exception as e:
+                                    # Notifikasi Gagal jika ada error database
+                                    st.error(f"❌ Gagal mengubah data: {str(e)}")
                                 
                 elif mode_aksi == "🗑️ Hapus":
                     st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:8px; border-radius:6px; border:1px solid #c62828; margin-bottom:8px; font-size:11px; color:#c62828;'>Hapus data <b>{data_row['kategori']} (Rp {data_row['jumlah']:,.0f})</b>?</div>", unsafe_allow_html=True)
                     col_del1, col_del2 = st.columns(2)
                     with col_del1:
                         if st.button("🔴 Ya, Hapus", key="confirm_del_universal", use_container_width=True):
-                            conn = get_connection()
-                            with conn.cursor() as cursor: cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
-                            conn.commit(); conn.close()
-                            st.success("Terhapus!"); st.rerun()
-                    with col_del2:
-                        if st.button("Batal", key="cancel_del_universal", use_container_width=True):
-                            st.rerun()
+                            try:
+                                conn = get_connection()
+                                with conn.cursor() as cursor: 
+                                    cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
+                                conn.commit()
+                                conn.close()
+                                
+                                # Notifikasi Berhasil
+                                st.toast("🗑️ Data transaksi telah dihapus!", icon="ℹ️")
+                                st.success("Terhapus!")
+                                st.rerun()
+                            except Exception as e:
+                                # Notifikasi Gagal jika ada error database
+                                st.error(f"❌ Gagal menghapus data: {str(e)}")
 
         st.markdown("<hr style='border-top: 1px solid rgba(139, 0, 0, 0.15); margin: 12px 0;'>", unsafe_allow_html=True)
 
