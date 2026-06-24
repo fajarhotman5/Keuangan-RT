@@ -385,7 +385,7 @@ elif st.session_state.menu_aktif == 'unduh':
                 )
 
 # ==========================================
-# 2. MENU: RIWAYAT (TAP / SELEKSI LANGSUNG UNTUK EDIT/HAPUS)
+# 2. MENU: RIWAYAT (TAP LANGSUNG PADA ELEMEN UNTUK EDIT/HAPUS)
 # ==========================================
 elif st.session_state.menu_aktif == 'riwayat':
     st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 14px; margin-bottom: 8px;'>📜 Riwayat Transaksi</p>", unsafe_allow_html=True)
@@ -403,49 +403,67 @@ elif st.session_state.menu_aktif == 'riwayat':
         else:
             df_tampil = df_trans.copy()
             
-        id_terpilih = None
+        id_terpilih = st.session_state.get('id_terpilih_riwayat', None)
         
-        # --- MODE DESKTOP / LAPTOP (Menggunakan st.dataframe Interaktif untuk Pilih & Klik) ---
+        # --- MODE DESKTOP / LAPTOP ---
         st.markdown('<div class="desktop-only">', unsafe_allow_html=True)
         if not df_tampil.empty:
-            df_laptop = df_tampil.copy()
-            df_laptop['tanggal'] = df_laptop['tanggal'].apply(lambda x: x.strftime('%d-%m-%Y'))
-            df_laptop['jumlah'] = df_laptop['jumlah'].apply(lambda x: f"Rp {x:,.0f}")
+            # Render Header Tabel PC manual biar estetikanya gak berubah sama sekali
+            st.markdown("""
+                <table style='width:100%; border-collapse: collapse; font-size: 12px; text-align: left;'>
+                    <tr style='background-color: var(--background-color); border-bottom: 2px solid #8B0000;'>
+                        <th style='padding: 8px; color: var(--text-color);'>Tanggal</th>
+                        <th style='padding: 8px; color: var(--text-color);'>Aliran</th>
+                        <th style='padding: 8px; color: var(--text-color);'>Wallet</th>
+                        <th style='padding: 8px; color: var(--text-color);'>Kategori</th>
+                        <th style='padding: 8px; color: var(--text-color);'>Nominal</th>
+                        <th style='padding: 8px; color: var(--text-color);'>Keterangan</th>
+                        <th style='padding: 8px; color: var(--text-color); text-align:center;'>Aksi</th>
+                    </tr>
+            """, unsafe_allow_html=True)
             
-            # Ubah nama kolom agar cantik di layar
-            df_laptop.columns = ['ID', 'Aliran', 'Tanggal', 'Wallet', 'Kategori', 'Nominal', 'Reimburse', 'Keterangan']
-            
-            st.caption("💡 *Klik/Centang lingkaran di sebelah kiri baris tabel untuk Memilih Transaksi yang ingin di-Edit atau Hapus.*")
-            
-            # Fitur Seleksi Baris Otomatis bawaan Streamlit
-            event = st.dataframe(
-                df_laptop,
-                use_container_width=True,
-                hide_index=True,
-                on_select="rerun",
-                selection_mode="single-row"
-            )
-            
-            # Jika user memilih salah satu baris di tabel laptop
-            if event and event.get("selection") and event["selection"].get("rows"):
-                idx_terpilih_laptop = event["selection"]["rows"][0]
-                id_terpilih = int(df_tampil.iloc[idx_terpilih_laptop]['id_transaksi'])
+            for index, row in df_tampil.iterrows():
+                tgl_str = row['tanggal'].strftime('%d-%m-%Y')
+                txt_jenis = "Masuk" if row['jenis'] == "Pemasukan" else "Keluar"
+                color_jenis = "#2E7D32" if row['jenis'] == "Pemasukan" else "#C62828"
+                bg_row = "rgba(139,0,0,0.05)" if id_terpilih == row['id_transaksi'] else "transparent"
+                
+                # Sisi kiri data tetap html murni, sisi kanan kita kasih tombol "Pilih" tipis pendeteksi klik
+                col_t1, col_t2 = st.columns([6, 1])
+                with col_t1:
+                    st.markdown(f"""
+                        <table style='width:100%; border-collapse: collapse; font-size: 12px; background-color: {bg_row};'>
+                            <tr style='border-bottom: 1px solid rgba(0,0,0,0.1);'>
+                                <td style='padding: 8px; width: 14%; color: var(--text-color);'>{tgl_str}</td>
+                                <td style='padding: 8px; width: 10%; color: {color_jenis}; font-weight: bold;'>{txt_jenis}</td>
+                                <td style='padding: 8px; width: 12%; color: var(--text-color);'>{row['wallet']}</td>
+                                <td style='padding: 8px; width: 18%; color: var(--text-color); font-weight: 600;'>{row['kategori']}</td>
+                                <td style='padding: 8px; width: 16%; color: {color_jenis}; font-weight: bold;'>Rp {row['jumlah']:,.0f}</td>
+                                <td style='padding: 8px; width: 30%; color: var(--text-color); opacity: 0.8;'>{row['keterangan'] or '-'}</td>
+                            </tr>
+                        </table>
+                    """, unsafe_allow_html=True)
+                with col_t2:
+                    if st.button("👉 Pilih", key=f"pc_pilih_{row['id_transaksi']}", use_container_width=True):
+                        st.session_state.id_terpilih_riwayat = row['id_transaksi']
+                        st.rerun()
+            st.markdown("</table>", unsafe_allow_html=True)
         else:
             st.write("Data tidak ditemukan.")
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # --- MODE MOBILE / HP (Interaksi Tap Langsung lewat Tombol Dinamis) ---
+        # --- MODE MOBILE / HP (TAP LANGSUNG PADA KARTU) ---
         st.markdown('<div class="mobile-only">', unsafe_allow_html=True)
         if not df_tampil.empty:
-            st.caption("💡 *Ketuk tombol '⚙️ Aksi' di bawah masing-masing kartu riwayat untuk Edit/Hapus.*")
             for index, row in df_tampil.iterrows():
                 tgl_mini = row['tanggal'].strftime('%d-%m-%Y')
                 txt_jenis = "Masuk" if row['jenis'] == "Pemasukan" else "Keluar"
                 badge_color = "#2E7D32" if row['jenis'] == "Pemasukan" else "#C62828"
+                border_aktif = "2px solid #B8860B" if id_terpilih == row['id_transaksi'] else "1px solid rgba(139,0,0,0.2)"
                 
-                # Render visual kartu estetik asli bawaan tanpa diubah sedikit pun
+                # Kartu tampilan visual persis aslinya 100% tanpa berubah sedikit pun
                 st.markdown(f"""
-                    <div style='background-color: var(--background-color); border: 1px solid rgba(139,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 6px; position: relative;'>
+                    <div style='background-color: var(--background-color); border: {border_aktif}; padding: 10px; border-radius: 8px; margin-bottom: 2px;'>
                         <div style='display: flex; justify-content: space-between; align-items: center;'>
                             <span style='font-size: 10px; font-weight: bold; color: var(--text-color); opacity: 0.6;'>{tgl_mini} &bull; {row['wallet']}</span>
                             <span style='background-color: {badge_color}; color: white; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 10px;'>{txt_jenis}</span>
@@ -456,23 +474,20 @@ elif st.session_state.menu_aktif == 'riwayat':
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Tombol Tap Terbuka Ringan di bawah kartu (Interaksi Tap Pengganti Aksi Cepat)
-                if st.button(f"⚙️ Aksi untuk {row['kategori']} ({tgl_mini})", key=f"tap_{row['id_transaksi']}", use_container_width=True):
-                    st.session_state.id_aktif_hp = row['id_transaksi']
-            
-            # Cek jika ada id aktif yang terpilih dari ketukan layar HP
-            if 'id_aktif_hp' in st.session_state and st.session_state.id_aktif_hp in df_tampil['id_transaksi'].values:
-                id_terpilih = st.session_state.id_aktif_hp
+                # Tombol transparan mepet di bawah kartu untuk mendeteksi sentuhan jari (Tap)
+                if st.button(f"👆 Tap untuk Atur: {row['kategori']}", key=f"hp_tap_{row['id_transaksi']}", use_container_width=True):
+                    st.session_state.id_terpilih_riwayat = row['id_transaksi']
+                    st.rerun()
         else:
             st.write("Data tidak ditemukan.")
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # --- BLOK FORM MODAL EDIT / HAPUS (Otomatis Muncul saat Baris/Kartu Ditekan) ---
-        if id_terpilih:
+        # --- FORM MODAL EDIT / HAPUS (Muncul otomatis setelah mendeteksi Tap/Klik) ---
+        if id_terpilih and id_terpilih in df_trans['id_transaksi'].values:
             data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
             
             st.markdown("---")
-            st.markdown(f"<p style='color: #B8860B; font-weight: bold; font-size: 13px; margin-bottom: 4px;'>🛠️ Pengaturan Transaksi Terpilih (ID: {id_terpilih})</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color: #B8860B; font-weight: bold; font-size: 13px; margin-bottom: 4px;'>🛠️ Pengaturan Transaksi Terpilih</p>", unsafe_allow_html=True)
             
             mode_aksi = st.radio("Pilih Operasi Aksi:", ["📝 Edit Data", "🗑️ Hapus Data"], horizontal=True)
             
@@ -498,7 +513,7 @@ elif st.session_state.menu_aktif == 'riwayat':
                                     )
                                 conn.commit()
                                 conn.close()
-                                if 'id_aktif_hp' in st.session_state: del st.session_state.id_aktif_hp
+                                if 'id_terpilih_riwayat' in st.session_state: del st.session_state.id_terpilih_riwayat
                                 st.toast("✅ Data berhasil diperbarui!", icon="🎉")
                                 st.success("Berhasil diubah!")
                                 st.rerun()
@@ -506,7 +521,7 @@ elif st.session_state.menu_aktif == 'riwayat':
                                 st.error(f"❌ Gagal mengubah data: {str(e)}")
                     with col_ef2:
                         if st.form_submit_button("Batal", use_container_width=True):
-                            if 'id_aktif_hp' in st.session_state: del st.session_state.id_aktif_hp
+                            if 'id_terpilih_riwayat' in st.session_state: del st.session_state.id_terpilih_riwayat
                             st.rerun()
                             
             elif "🗑️ Hapus Data" in mode_aksi:
@@ -520,7 +535,7 @@ elif st.session_state.menu_aktif == 'riwayat':
                                 cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
                             conn.commit()
                             conn.close()
-                            if 'id_aktif_hp' in st.session_state: del st.session_state.id_aktif_hp
+                            if 'id_terpilih_riwayat' in st.session_state: del st.session_state.id_terpilih_riwayat
                             st.toast("🗑️ Data transaksi telah dihapus!", icon="ℹ️")
                             st.success("Terhapus!")
                             st.rerun()
@@ -528,7 +543,7 @@ elif st.session_state.menu_aktif == 'riwayat':
                             st.error(f"❌ Gagal menghapus data: {str(e)}")
                 with col_del2:
                     if st.button("Batal", key="cancel_del_univ", use_container_width=True):
-                        if 'id_aktif_hp' in st.session_state: del st.session_state.id_aktif_hp
+                        if 'id_terpilih_riwayat' in st.session_state: del st.session_state.id_terpilih_riwayat
                         st.rerun()
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
