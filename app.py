@@ -146,14 +146,12 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
-    
-    <div style='text-align: center; margin-bottom: 15px;'>
-        <div style='font-family: "Amatic SC", sans-serif; font-size: 34px; font-weight: bold; font-style: italic; color: var(--text-color); letter-spacing: 1px; margin: 0; padding: 0; line-height: 1.1;'>Informasi Keuangan Kei</div>
-        <div style='font-size: 11px; color: var(--text-color); font-weight: 500; opacity: 0.6; letter-spacing: 1px; margin-top: 4px; padding: 0;'>HARUS CATAT SETIAP SAAT</div>
-    </div>
-""", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center; margin: 40px 0 20px 0;'>"
+        "<p style='font-size:20px; font-weight:bold; color:#8B0000;'>Informasi Keuangan Kei</p>"
+        "<p style='font-size:11px; color:#888; letter-spacing:1px;'>HARUS CATAT SETIAP SAAT</p>"
+        "</div>",
+        unsafe_allow_html=True
     )
     with st.form("form_login"):
         username = st.text_input("Username")
