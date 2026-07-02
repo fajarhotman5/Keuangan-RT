@@ -141,6 +141,30 @@ def init_db():
 
 init_db()
 
+# --- LOGIN ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.markdown(
+        "<div style='text-align:center; margin: 40px 0 20px 0;'>"
+        "<p style='font-size:20px; font-weight:bold; color:#8B0000;'>Informasi Keuangan Kei</p>"
+        "<p style='font-size:11px; color:#888; letter-spacing:1px;'>HARUS CATAT SETIAP SAAT</p>"
+        "</div>",
+        unsafe_allow_html=True
+    )
+    with st.form("form_login"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        masuk = st.form_submit_button("Masuk", use_container_width=True)
+    if masuk:
+        if username == st.secrets["login"]["username"] and password == st.secrets["login"]["password"]:
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("Username atau password salah.")
+    st.stop()
+    
 # --- VALID LISTS ---
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
@@ -167,6 +191,14 @@ if not df_trans.empty:
     total_masuk = df_trans[df_trans['jenis'] == 'Pemasukan']['jumlah'].sum()
     total_keluar = df_trans[df_trans['jenis'] == 'Pengeluaran']['jumlah'].sum()
     sisa_saldo = total_masuk - total_keluar
+
+    # Filter bulan berjalan untuk kartu metrik
+    bulan_ini = datetime.now().month
+    tahun_ini = datetime.now().year
+    df_bulan_ini = df_trans[
+        df_trans['tanggal'].apply(lambda x: x.month == bulan_ini and x.year == tahun_ini)
+    ]
+    total_keluar_bulan = df_bulan_ini[df_bulan_ini['jenis'] == 'Pengeluaran']['jumlah'].sum()
     
     wallet_balances = {}
     for w in LIST_WALLET:
@@ -176,6 +208,7 @@ if not df_trans.empty:
 else:
     sisa_saldo = 0
     total_keluar = 0
+    total_keluar_bulan = 0
     wallet_balances = {w: 0 for w in LIST_WALLET}
 
 # --- KARTU METRIK UTAMA (KEMBAR MAROON PREMIUM) ---
@@ -186,8 +219,8 @@ st.markdown(f"""
             <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFFFFF;'>Rp {sisa_saldo:,.0f}</h3>
         </div>
         <div style='flex: 1; padding: 8px 6px; border-radius: 12px; text-align: center; background-color: #8B0000; border: 1.5px solid #8B0000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-            <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.3px;'>Total Pengeluaran</p>
-            <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFFFFF;'>Rp {total_keluar:,.0f}</h3>
+            <p style='margin: 0; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); letter-spacing: 0.3px;'>Pengeluaran Bulan Ini</p>
+            <h3 style='margin: 2px 0 0 0; font-size: 15px; font-weight: 800; color: #FFFFFF;'>Rp {total_keluar_bulan:,.0f}</h3>
         </div>
     </div>
 """, unsafe_allow_html=True)
