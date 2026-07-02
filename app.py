@@ -527,7 +527,7 @@ elif st.session_state.menu_aktif == 'riwayat':
         st.markdown(f"<div class='mobile-card-container'>{html_mobile_cards}</div>", unsafe_allow_html=True)
 # 4. MENU: REKAP
 elif st.session_state.menu_aktif == 'rekap':
-    st.markdown("<p style='color: #8B0000; font-weight: bold; margin-bottom: 5px; font-size: 14px;'>📊 Rekap Ringkas Data</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #8B0000; font-weight: bold; margin-bottom: 5px; font-size: 14px;'>📊 Rekap Pemasukan Pengeluaran</p>", unsafe_allow_html=True)
     if df_trans.empty:
         st.info("Belum ada data transaksi.")
     else:
