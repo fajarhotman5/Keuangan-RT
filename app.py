@@ -71,9 +71,12 @@ def init_db():
     with conn.cursor() as cursor:
         cursor.execute("CREATE DATABASE IF NOT EXISTS keuangan_rt")
         cursor.execute("USE keuangan_rt")
+        
+        # Tambah kolom username ke tabel transaksi
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS transaksi (
                 id_transaksi INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) NOT NULL DEFAULT 'default_user',
                 jenis ENUM('Pemasukan', 'Pengeluaran') NOT NULL,
                 tanggal DATE NOT NULL,
                 wallet VARCHAR(30) NOT NULL,
@@ -83,12 +86,19 @@ def init_db():
                 keterangan TEXT
             )
         """)
+        cursor.execute("SHOW COLUMNS FROM transaksi LIKE 'username'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE transaksi ADD COLUMN username VARCHAR(50) NOT NULL DEFAULT 'default_user' AFTER id_transaksi")
+            
         cursor.execute("SHOW COLUMNS FROM transaksi LIKE 'reimburse'")
         if not cursor.fetchone():
             cursor.execute("ALTER TABLE transaksi ADD COLUMN reimburse VARCHAR(10) NOT NULL DEFAULT 'Tidak' AFTER jumlah")
+            
+        # Tambah kolom username ke tabel transfer
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS transfer (
                 id_transfer INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) NOT NULL DEFAULT 'default_user',
                 tanggal DATE NOT NULL,
                 dari_wallet VARCHAR(30) NOT NULL,
                 ke_wallet VARCHAR(30) NOT NULL,
@@ -96,6 +106,10 @@ def init_db():
                 keterangan TEXT
             )
         """)
+        cursor.execute("SHOW COLUMNS FROM transfer LIKE 'username'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE transfer ADD COLUMN username VARCHAR(50) NOT NULL DEFAULT 'default_user' AFTER id_transfer")
+            
     conn.commit()
     conn.close()
 
@@ -104,25 +118,30 @@ init_db()
 # --- LOGIN ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+if 'username' not in st.session_state:
+    st.session_state.username = ""
 
 if not st.session_state.logged_in:
     st.markdown(
         "<div style='text-align:center; margin: 40px 0 20px 0;'>"
-        "<p style='font-size:20px; font-weight:bold; color:#8B0000;'>Informasi Keuangan Kei</p>"
+        "<p style='font-size:20px; font-weight:bold; color:#8B0000;'>Informasi Keuangan Keluarga</p>"
         "<p style='font-size:11px; color:#888; letter-spacing:1px;'>HARUS CATAT SETIAP SAAT</p>"
         "</div>",
         unsafe_allow_html=True
     )
     with st.form("form_login"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
+        user_input = st.text_input("Username")
+        password_input = st.text_input("Password", type="password")
         masuk = st.form_submit_button("Masuk", use_container_width=True)
+        
     if masuk:
-        if username == st.secrets["login"]["username"] and password == st.secrets["login"]["password"]:
+        # Cek apakah username terdaftar di berkas rahasia dan password cocok
+        if user_input in st.secrets["users"] and password_input == st.secrets["users"][user_input]:
             st.session_state.logged_in = True
+            st.session_state.username = user_input
             st.rerun()
         else:
-            st.error("Upsss, anda bukan keluarga kami!")
+            st.error("Upsss, kombinasi Akun salah atau Anda bukan keluarga kami!")
     st.stop()
 
 # --- VALID LISTS ---
@@ -130,19 +149,30 @@ LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
 
-# --- JUDUL ---
-st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
-    <div style='text-align: center; margin-bottom: 15px;'>
-        <div style='font-family: "Amatic SC", sans-serif; font-size: 34px; font-weight: bold; font-style: italic; color: var(--text-color); letter-spacing: 1px; margin: 0; padding: 0; line-height: 1.1;'>Informasi Keuangan Kei</div>
-        <div style='font-size: 11px; color: var(--text-color); font-weight: 500; opacity: 0.6; letter-spacing: 1px; margin-top: 4px; padding: 0;'>HARUS CATAT SETIAP SAAT</div>
-    </div>
-""", unsafe_allow_html=True)
+# --- JUDUL & LOGOUT ---
+col_title, col_logout = st.columns([4, 1])
+with col_title:
+    st.markdown(f"""
+        <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
+        <div style='text-align: left; margin-bottom: 15px;'>
+            <div style='font-family: "Amatic SC", sans-serif; font-size: 34px; font-weight: bold; font-style: italic; color: var(--text-color); letter-spacing: 1px; margin: 0; padding: 0; line-height: 1.1;'>Informasi Keuangan {st.session_state.username.capitalize()}</div>
+            <div style='font-size: 11px; color: var(--text-color); font-weight: 500; opacity: 0.6; letter-spacing: 1px; margin-top: 4px; padding: 0;'>HARUS CATAT SETIAP SAAT</div>
+        </div>
+    """, unsafe_allow_html=True)
+with col_logout:
+    if st.button("🚪 Keluar", use_container_width=True):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.menu_aktif = None
+        st.rerun()
 
-# --- DATA FETCHING ---
+# --- DATA FETCHING (DIFILTER BERDASARKAN USERNAME) ---
 conn = get_connection()
-df_trans = pd.read_sql("SELECT * FROM transaksi ORDER BY tanggal DESC, id_transaksi DESC", conn)
-df_transfer = pd.read_sql("SELECT * FROM transfer ORDER BY tanggal DESC, id_transfer DESC", conn)
+query_trans = "SELECT * FROM transaksi WHERE username = %s ORDER BY tanggal DESC, id_transaksi DESC"
+df_trans = pd.read_sql(query_trans, conn, params=[st.session_state.username])
+
+query_transfer = "SELECT * FROM transfer WHERE username = %s ORDER BY tanggal DESC, id_transfer DESC"
+df_transfer = pd.read_sql(query_transfer, conn, params=[st.session_state.username])
 conn.close()
 
 if not df_trans.empty:
@@ -241,8 +271,8 @@ if st.session_state.menu_aktif == 'tambah':
                         conn = get_connection()
                         with conn.cursor() as cursor:
                             cursor.execute(
-                                "INSERT INTO transfer (tanggal, dari_wallet, ke_wallet, jumlah, keterangan) VALUES (%s, %s, %s, %s, %s)",
-                                (tgl_tf, dari_wlt, ke_wlt, jml_tf, ket_tf)
+                                "INSERT INTO transfer (username, tanggal, dari_wallet, ke_wallet, jumlah, keterangan) VALUES (%s, %s, %s, %s, %s, %s)",
+                                (st.session_state.username, tgl_tf, dari_wlt, ke_wlt, jml_tf, ket_tf)
                             )
                         conn.commit()
                         conn.close()
@@ -270,8 +300,8 @@ if st.session_state.menu_aktif == 'tambah':
                         conn = get_connection()
                         with conn.cursor() as cursor:
                             cursor.execute(
-                                "INSERT INTO transaksi (jenis, tanggal, wallet, kategori, jumlah, reimburse, keterangan) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                                (jenis_tx, tgl, wlt, kat, jml, remb, ket)
+                                "INSERT INTO transaksi (username, jenis, tanggal, wallet, kategori, jumlah, reimburse, keterangan) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                                (st.session_state.username, jenis_tx, tgl, wlt, kat, jml, remb, ket)
                             )
                         conn.commit()
                         conn.close()
@@ -313,7 +343,7 @@ elif st.session_state.menu_aktif == 'unduh':
                 st.download_button(
                     label="🟢 Unduh File Excel",
                     data=buffer_xl.getvalue(),
-                    file_name=f"Laporan_Keuangan_{tgl_awal.strftime('%d-%m-%Y')}_{tgl_akhir.strftime('%d-%m-%Y')}.xlsx",
+                    file_name=f"Laporan_Keuangan_{st.session_state.username}_{tgl_awal.strftime('%d-%m-%Y')}_{tgl_akhir.strftime('%d-%m-%Y')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
@@ -330,7 +360,7 @@ elif st.session_state.menu_aktif == 'unduh':
 
                 story.append(Paragraph(f"Waktu Cetak: {waktu_cetak}", meta_style))
                 story.append(Spacer(1, 10))
-                story.append(Paragraph("LAPORAN MUTASI KEUANGAN KEI", title_style))
+                story.append(f"LAPORAN MUTASI KEUANGAN {st.session_state.username.upper()}", title_style)
                 story.append(Paragraph(f"Periode: {tgl_awal.strftime('%d-%m-%Y')} s/d {tgl_akhir.strftime('%d-%m-%Y')}", sub_style))
 
                 table_data = [[
@@ -376,7 +406,7 @@ elif st.session_state.menu_aktif == 'unduh':
                 st.download_button(
                     label="🔴 Unduh File PDF",
                     data=buffer_pdf.getvalue(),
-                    file_name=f"Laporan_Keuangan_{tgl_awal.strftime('%d-%m-%Y')}_{tgl_akhir.strftime('%d-%m-%Y')}.pdf",
+                    file_name=f"Laporan_Keuangan_{st.session_state.username}_{tgl_awal.strftime('%d-%m-%Y')}_{tgl_akhir.strftime('%d-%m-%Y')}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
@@ -434,8 +464,8 @@ elif st.session_state.menu_aktif == 'riwayat':
                                         conn = get_connection()
                                         with conn.cursor() as cursor:
                                             cursor.execute(
-                                                "UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
-                                                (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih)
+                                                "UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s AND username=%s",
+                                                (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih, st.session_state.username)
                                             )
                                         conn.commit()
                                         conn.close()
@@ -453,7 +483,7 @@ elif st.session_state.menu_aktif == 'riwayat':
                                 try:
                                     conn = get_connection()
                                     with conn.cursor() as cursor:
-                                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
+                                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s AND username=%s", (id_terpilih, st.session_state.username))
                                     conn.commit()
                                     conn.close()
                                     st.toast("Data transaksi telah dihapus!", icon="ℹ️")
@@ -523,7 +553,7 @@ elif st.session_state.menu_aktif == 'riwayat':
                 try:
                     conn = get_connection()
                     with conn.cursor() as cursor:
-                        cursor.execute("DELETE FROM transfer WHERE id_transfer=%s", (id_tf_pilih,))
+                        cursor.execute("DELETE FROM transfer WHERE id_transfer=%s AND username=%s", (id_tf_pilih, st.session_state.username))
                     conn.commit()
                     conn.close()
                     st.success("Transfer dihapus!")
@@ -559,9 +589,12 @@ elif st.session_state.menu_aktif == 'rekap':
 
             tab_wlt, tab_kat, tab_rmb = st.tabs(["💳 Wallet", "🗂️ Kategori", "🔄 Reimburse"])
             with tab_wlt:
-                df_wlt = df_rk.groupby(['wallet', 'jenis'])['jumlah'].sum().unstack(fill_value=0).reset_index()
-                for _, r in df_wlt.iterrows():
-                    st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>{r['wallet']}</b>: <span style='color:#2e7d32;'>+{r.get('Pemasukan',0):,.0f}</span> | <span style='color:#c62828;'>-{r.get('Pengeluaran',0):,.0f}</span></p>", unsafe_allow_html=True)
+                if not df_rk.empty and 'Pemasukan' in df_rk['jenis'].values or 'Pengeluaran' in df_rk['jenis'].values:
+                    df_wlt = df_rk.groupby(['wallet', 'jenis'])['jumlah'].sum().unstack(fill_value=0).reset_index()
+                    for _, r in df_wlt.iterrows():
+                        st.markdown(f"<p style='margin:0; font-size:12px;'>• <b>{r['wallet']}</b>: <span style='color:#2e7d32;'>+{r.get('Pemasukan',0):,.0f}</span> | <span style='color:#c62828;'>-{r.get('Pengeluaran',0):,.0f}</span></p>", unsafe_allow_html=True)
+                else:
+                    st.caption("Belum ada data aliran dana.")
             with tab_kat:
                 df_kat = df_rk.groupby(['kategori', 'jenis'])['jumlah'].sum().reset_index()
                 for _, r in df_kat.sort_values(by='jumlah', ascending=False).iterrows():
