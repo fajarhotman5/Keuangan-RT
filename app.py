@@ -366,6 +366,141 @@ elif st.session_state.menu_aktif == 'unduh':
                 ]))
                 story.append(t_ringkasan)
 
+                # ── PERBANDINGAN BULAN INI VS BULAN LALU ──
+                from dateutil.relativedelta import relativedelta
+                tgl_ref = datetime.now()
+                bulan_ini_start = tgl_ref.replace(day=1)
+                bulan_lalu_start = (bulan_ini_start - relativedelta(months=1))
+                bulan_lalu_end = bulan_ini_start - timedelta(days=1)
+                tahun_lalu_start = bulan_ini_start - relativedelta(years=1)
+                tahun_lalu_end = (tahun_lalu_start + relativedelta(months=1)) - timedelta(days=1)
+
+                df_bln_ini = df_trans[df_trans['tanggal'].apply(lambda x: x >= bulan_ini_start.date())]
+                df_bln_lalu = df_trans[df_trans['tanggal'].apply(lambda x: bulan_lalu_start.date() <= x <= bulan_lalu_end.date())]
+                df_thn_lalu = df_trans[df_trans['tanggal'].apply(lambda x: tahun_lalu_start.date() <= x <= tahun_lalu_end.date())]
+
+                nama_bln_ini = tgl_ref.strftime('%B %Y')
+                nama_bln_lalu = bulan_lalu_start.strftime('%B %Y')
+                nama_thn_lalu = tahun_lalu_start.strftime('%B %Y')
+
+                def hitung(df, jenis):
+                    return df[df['jenis'] == jenis]['jumlah'].sum() if not df.empty else 0
+
+                def pct_change(now, prev):
+                    if prev == 0:
+                        return "N/A"
+                    pct = ((now - prev) / prev) * 100
+                    sign = "+" if pct >= 0 else ""
+                    return f"{sign}{pct:.1f}%"
+
+                masuk_bi = hitung(df_bln_ini, 'Pemasukan')
+                keluar_bi = hitung(df_bln_ini, 'Pengeluaran')
+                net_bi = masuk_bi - keluar_bi
+
+                masuk_bl = hitung(df_bln_lalu, 'Pemasukan')
+                keluar_bl = hitung(df_bln_lalu, 'Pengeluaran')
+                net_bl = masuk_bl - keluar_bl
+
+                story.append(Paragraph("PERBANDINGAN BULANAN", section_style))
+
+                def clr(val, invert=False):
+                    if val == "N/A": return colors.HexColor('#888888')
+                    num = float(val.replace('%','').replace('+',''))
+                    if invert:
+                        return colors.HexColor('#2E7D32') if num <= 0 else colors.HexColor('#C62828')
+                    return colors.HexColor('#2E7D32') if num >= 0 else colors.HexColor('#C62828')
+
+                def ps(name, val, color):
+                    return Paragraph(val, ParagraphStyle(name=name, fontName='Helvetica-Bold', fontSize=8, textColor=color))
+
+                bln_header = [
+                    Paragraph("Keterangan", header_style),
+                    Paragraph(nama_bln_ini, header_style),
+                    Paragraph(nama_bln_lalu, header_style),
+                    Paragraph("Perubahan", header_style),
+                ]
+                pct_masuk = pct_change(masuk_bi, masuk_bl)
+                pct_keluar = pct_change(keluar_bi, keluar_bl)
+                pct_net = pct_change(net_bi, net_bl)
+
+                bln_data = [bln_header,
+                    [Paragraph("Pemasukan", cell_style),
+                     ps('m1', f"Rp {masuk_bi:,.0f}", colors.HexColor('#2E7D32')),
+                     ps('m2', f"Rp {masuk_bl:,.0f}", colors.HexColor('#2E7D32')),
+                     ps('mp', pct_masuk, clr(pct_masuk))],
+                    [Paragraph("Pengeluaran", cell_style),
+                     ps('k1', f"Rp {keluar_bi:,.0f}", colors.HexColor('#C62828')),
+                     ps('k2', f"Rp {keluar_bl:,.0f}", colors.HexColor('#C62828')),
+                     ps('kp', pct_keluar, clr(pct_keluar, invert=True))],
+                    [Paragraph("Net", cell_bold),
+                     ps('n1', f"Rp {net_bi:,.0f}", colors.HexColor('#2E7D32') if net_bi >= 0 else colors.HexColor('#C62828')),
+                     ps('n2', f"Rp {net_bl:,.0f}", colors.HexColor('#2E7D32') if net_bl >= 0 else colors.HexColor('#C62828')),
+                     ps('np', pct_net, clr(pct_net))],
+                ]
+                t_bln = Table(bln_data, colWidths=[140, 120, 120, 120])
+                t_bln.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('TOPPADDING', (0,0), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                    ('LEFTPADDING', (0,0), (-1,-1), 8),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 8),
+                    ('LINEBELOW', (0,2), (-1,2), 1.5, colors.HexColor('#8B0000')),
+                ]))
+                story.append(t_bln)
+
+                # ── PERBANDINGAN KATEGORI: BULAN INI vs BULAN LALU vs TAHUN LALU ──
+                story.append(Paragraph("PERBANDINGAN PENGELUARAN PER KATEGORI", section_style))
+
+                all_kat_keluar = set(
+                    list(df_bln_ini[df_bln_ini['jenis']=='Pengeluaran']['kategori'].unique()) +
+                    list(df_bln_lalu[df_bln_lalu['jenis']=='Pengeluaran']['kategori'].unique()) +
+                    list(df_thn_lalu[df_thn_lalu['jenis']=='Pengeluaran']['kategori'].unique())
+                )
+
+                kat_cmp_header = [
+                    Paragraph("Kategori", header_style),
+                    Paragraph(nama_bln_ini, header_style),
+                    Paragraph(nama_bln_lalu, header_style),
+                    Paragraph(nama_thn_lalu, header_style),
+                    Paragraph("vs Bln Lalu", header_style),
+                ]
+                kat_cmp_data = [kat_cmp_header]
+
+                def kat_sum(df, kat):
+                    if df.empty: return 0
+                    r = df[(df['jenis']=='Pengeluaran') & (df['kategori']==kat)]['jumlah'].sum()
+                    return r if r else 0
+
+                for kat in sorted(all_kat_keluar):
+                    v_bi = kat_sum(df_bln_ini, kat)
+                    v_bl = kat_sum(df_bln_lalu, kat)
+                    v_tl = kat_sum(df_thn_lalu, kat)
+                    pct_k = pct_change(v_bi, v_bl)
+                    pct_k_color = clr(pct_k, invert=True)
+                    kat_cmp_data.append([
+                        Paragraph(kat, cell_style),
+                        Paragraph(f"Rp {v_bi:,.0f}" if v_bi else "-", cell_style),
+                        Paragraph(f"Rp {v_bl:,.0f}" if v_bl else "-", cell_style),
+                        Paragraph(f"Rp {v_tl:,.0f}" if v_tl else "-", cell_style),
+                        ps(f'pct_{kat}', pct_k, pct_k_color),
+                    ])
+
+                t_kat_cmp = Table(kat_cmp_data, colWidths=[120, 95, 95, 95, 95])
+                t_kat_cmp.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('TOPPADDING', (0,0), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                    ('LEFTPADDING', (0,0), (-1,-1), 6),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 6),
+                ]))
+                story.append(t_kat_cmp)
+
                 # ── REKAP PER WALLET ──
                 story.append(Paragraph("REKAP PER WALLET", section_style))
                 df_wlt_f = df_filter.groupby(['wallet', 'jenis'])['jumlah'].sum().unstack(fill_value=0).reset_index()
