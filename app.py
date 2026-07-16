@@ -128,7 +128,7 @@ if not st.session_state.logged_in:
 # --- VALID LISTS ---
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
 KAT_PENGELUARAN = ['Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Lain-lain']
-KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Lainnya']
+KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Uang Makan', 'Lainnya']
 
 # --- JUDUL ---
 st.markdown("""
@@ -321,18 +321,128 @@ elif st.session_state.menu_aktif == 'unduh':
                 buffer_pdf = io.BytesIO()
                 doc = SimpleDocTemplate(buffer_pdf, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=40, bottomMargin=40)
                 story = []
+
                 title_style = ParagraphStyle(name='TitleStyle', fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#8B0000'), alignment=1, spaceAfter=4)
                 meta_style = ParagraphStyle(name='MetaStyle', fontName='Helvetica-Oblique', fontSize=8, textColor=colors.HexColor('#666666'), alignment=2)
-                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=9, textColor=colors.HexColor('#444444'), alignment=1, spaceAfter=20)
+                sub_style = ParagraphStyle(name='SubStyle', fontName='Helvetica', fontSize=9, textColor=colors.HexColor('#444444'), alignment=1, spaceAfter=12)
                 header_style = ParagraphStyle(name='HeaderStyle', fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, leading=10, alignment=1)
                 cell_style = ParagraphStyle(name='CellStyle', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#333333'))
                 cell_center = ParagraphStyle(name='CellCenter', fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#333333'), alignment=1)
+                cell_bold = ParagraphStyle(name='CellBold', fontName='Helvetica-Bold', fontSize=8, leading=11, textColor=colors.HexColor('#222222'))
+                section_style = ParagraphStyle(name='SectionStyle', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#8B0000'), spaceAfter=6, spaceBefore=12)
+
+                waktu_wib = datetime.now() + timedelta(hours=7)
+                waktu_cetak = waktu_wib.strftime("%d-%m-%Y %H:%M WIB")
 
                 story.append(Paragraph(f"Waktu Cetak: {waktu_cetak}", meta_style))
-                story.append(Spacer(1, 10))
+                story.append(Spacer(1, 8))
                 story.append(Paragraph("LAPORAN MUTASI KEUANGAN KEI", title_style))
                 story.append(Paragraph(f"Periode: {tgl_awal.strftime('%d-%m-%Y')} s/d {tgl_akhir.strftime('%d-%m-%Y')}", sub_style))
 
+                # ── RINGKASAN UTAMA ──
+                story.append(Paragraph("RINGKASAN", section_style))
+                total_masuk_f = df_filter[df_filter['jenis'] == 'Pemasukan']['jumlah'].sum()
+                total_keluar_f = df_filter[df_filter['jenis'] == 'Pengeluaran']['jumlah'].sum()
+                net_f = total_masuk_f - total_keluar_f
+                net_color = colors.HexColor('#2E7D32') if net_f >= 0 else colors.HexColor('#C62828')
+
+                ringkasan_data = [
+                    [Paragraph("Keterangan", header_style), Paragraph("Jumlah", header_style)],
+                    [Paragraph("Total Pemasukan", cell_style), Paragraph(f"Rp {total_masuk_f:,.0f}", ParagraphStyle(name='Green', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#2E7D32')))],
+                    [Paragraph("Total Pengeluaran", cell_style), Paragraph(f"Rp {total_keluar_f:,.0f}", ParagraphStyle(name='Red', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#C62828')))],
+                    [Paragraph("Selisih (Net)", cell_bold), Paragraph(f"Rp {net_f:,.0f}", ParagraphStyle(name='Net', fontName='Helvetica-Bold', fontSize=9, textColor=net_color))],
+                ]
+                t_ringkasan = Table(ringkasan_data, colWidths=[300, 200])
+                t_ringkasan.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('TOPPADDING', (0,0), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                    ('LEFTPADDING', (0,0), (-1,-1), 8),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 8),
+                    ('LINEBELOW', (0,2), (-1,2), 1.5, colors.HexColor('#8B0000')),
+                ]))
+                story.append(t_ringkasan)
+
+                # ── REKAP PER WALLET ──
+                story.append(Paragraph("REKAP PER WALLET", section_style))
+                df_wlt_f = df_filter.groupby(['wallet', 'jenis'])['jumlah'].sum().unstack(fill_value=0).reset_index()
+                wallet_data = [[Paragraph("Wallet", header_style), Paragraph("Pemasukan", header_style), Paragraph("Pengeluaran", header_style), Paragraph("Selisih", header_style)]]
+                for _, r in df_wlt_f.iterrows():
+                    masuk_w = r.get('Pemasukan', 0)
+                    keluar_w = r.get('Pengeluaran', 0)
+                    net_w = masuk_w - keluar_w
+                    net_w_color = colors.HexColor('#2E7D32') if net_w >= 0 else colors.HexColor('#C62828')
+                    wallet_data.append([
+                        Paragraph(str(r['wallet']), cell_bold),
+                        Paragraph(f"Rp {masuk_w:,.0f}", ParagraphStyle(name='WMasuk', fontName='Helvetica', fontSize=8, textColor=colors.HexColor('#2E7D32'))),
+                        Paragraph(f"Rp {keluar_w:,.0f}", ParagraphStyle(name='WKeluar', fontName='Helvetica', fontSize=8, textColor=colors.HexColor('#C62828'))),
+                        Paragraph(f"Rp {net_w:,.0f}", ParagraphStyle(name='WNet', fontName='Helvetica-Bold', fontSize=8, textColor=net_w_color)),
+                    ])
+                t_wallet = Table(wallet_data, colWidths=[120, 130, 130, 120])
+                t_wallet.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('TOPPADDING', (0,0), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                    ('LEFTPADDING', (0,0), (-1,-1), 8),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 8),
+                ]))
+                story.append(t_wallet)
+
+                # ── REKAP PER KATEGORI ──
+                story.append(Paragraph("REKAP PER KATEGORI", section_style))
+                df_kat_f = df_filter.groupby(['kategori', 'jenis'])['jumlah'].sum().reset_index().sort_values('jumlah', ascending=False)
+                kat_data = [[Paragraph("Kategori", header_style), Paragraph("Jenis", header_style), Paragraph("Jumlah", header_style)]]
+                for _, r in df_kat_f.iterrows():
+                    warna_kat = colors.HexColor('#2E7D32') if r['jenis'] == 'Pemasukan' else colors.HexColor('#C62828')
+                    kat_data.append([
+                        Paragraph(str(r['kategori']), cell_style),
+                        Paragraph(str(r['jenis']), ParagraphStyle(name='KatJenis', fontName='Helvetica', fontSize=8, textColor=warna_kat)),
+                        Paragraph(f"Rp {r['jumlah']:,.0f}", ParagraphStyle(name='KatJml', fontName='Helvetica-Bold', fontSize=8, textColor=warna_kat)),
+                    ])
+                t_kat = Table(kat_data, colWidths=[220, 120, 160])
+                t_kat.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                    ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('TOPPADDING', (0,0), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                    ('LEFTPADDING', (0,0), (-1,-1), 8),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 8),
+                ]))
+                story.append(t_kat)
+
+                # ── REKAP REIMBURSE ──
+                df_rmb_f = df_filter[df_filter['jenis'] == 'Pengeluaran'].groupby('reimburse')['jumlah'].sum().reset_index()
+                if not df_rmb_f.empty:
+                    story.append(Paragraph("REKAP REIMBURSE", section_style))
+                    rmb_data = [[Paragraph("Status", header_style), Paragraph("Jumlah", header_style)]]
+                    for _, r in df_rmb_f.iterrows():
+                        rmb_data.append([
+                            Paragraph(f"Reimburse: {r['reimburse']}", cell_style),
+                            Paragraph(f"Rp {r['jumlah']:,.0f}", cell_bold),
+                        ])
+                    t_rmb = Table(rmb_data, colWidths=[300, 200])
+                    t_rmb.setStyle(TableStyle([
+                        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
+                        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                        ('TOPPADDING', (0,0), (-1,-1), 6),
+                        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                        ('LEFTPADDING', (0,0), (-1,-1), 8),
+                        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+                    ]))
+                    story.append(t_rmb)
+
+                # ── DETAIL MUTASI ──
+                story.append(Paragraph("DETAIL MUTASI TRANSAKSI", section_style))
                 table_data = [[
                     Paragraph("TANGGAL", header_style),
                     Paragraph("ALIRAN", header_style),
@@ -366,8 +476,8 @@ elif st.session_state.menu_aktif == 'unduh':
                     ('LINEBELOW', (0,0), (-1,0), 1.5, colors.HexColor('#5A0000')),
                     ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
                     ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9F9F9')]),
-                    ('TOPPADDING', (0,0), (-1,-1), 7),
-                    ('BOTTOMPADDING', (0,0), (-1,-1), 7),
+                    ('TOPPADDING', (0,0), (-1,-1), 6),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 6),
                     ('LEFTPADDING', (0,0), (-1,-1), 5),
                     ('RIGHTPADDING', (0,0), (-1,-1), 5),
                 ]))
