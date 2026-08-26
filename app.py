@@ -50,6 +50,32 @@ st.markdown("""
     @media (max-width: 768px) {
         div[data-testid="stForm"] { padding: 8px; }
     }
+    [class*="st-key-txrow_"] div[data-testid="stHorizontalBlock"],
+    [class*="st-key-tfrow_"] div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+    [class*="st-key-txrow_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-of-type(1),
+    [class*="st-key-tfrow_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-of-type(1) {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
+    [class*="st-key-txrow_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-of-type(2),
+    [class*="st-key-txrow_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-of-type(3),
+    [class*="st-key-tfrow_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-of-type(2),
+    [class*="st-key-tfrow_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-of-type(3) {
+        flex: 0 0 38px !important;
+        width: 38px !important;
+        min-width: 38px !important;
+    }
+    [class*="st-key-txrow_"] div.stButton > button,
+    [class*="st-key-tfrow_"] div.stButton > button {
+        padding: 4px 0 !important;
+        width: 100% !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -619,28 +645,29 @@ elif st.session_state.menu_aktif == 'riwayat':
                 ket_str = row['keterangan'] if row['keterangan'] else "-"
                 rmb_badge = " • Reimburse" if row.get('reimburse', 'Tidak') == "Ya" else ""
 
-                col_info, col_edit, col_del = st.columns([6, 1, 1])
-                with col_info:
-                    st.markdown(
-                        f"""<div style='padding:6px 2px; border-bottom:1px solid rgba(139,0,0,0.12); font-size:12px;'>
-                        <div style='display:flex; justify-content:space-between;'>
-                            <span style='font-weight:700;'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span>
-                            <span style='font-weight:800; color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span>
-                        </div>
-                        <div style='color:#888; font-size:11px;'>📅 {tgl_str} | 💳 {row['wallet']} | {ket_str} <span style='color:#B8860B; font-weight:bold;'>#{id_}</span></div>
-                        </div>""",
-                        unsafe_allow_html=True
-                    )
-                with col_edit:
-                    if st.button("📝", key=f"edit_tx_{id_}", use_container_width=True):
-                        st.session_state.edit_id_tx = None if st.session_state.edit_id_tx == id_ else id_
-                        st.session_state.delete_id_tx = None
-                        st.rerun()
-                with col_del:
-                    if st.button("🗑️", key=f"del_tx_{id_}", use_container_width=True):
-                        st.session_state.delete_id_tx = None if st.session_state.delete_id_tx == id_ else id_
-                        st.session_state.edit_id_tx = None
-                        st.rerun()
+                with st.container(key=f"txrow_{id_}"):
+                    col_info, col_edit, col_del = st.columns([6, 1, 1])
+                    with col_info:
+                        st.markdown(
+                            f"""<div style='padding:6px 2px; border-bottom:1px solid rgba(139,0,0,0.12); font-size:12px;'>
+                            <div style='display:flex; justify-content:space-between;'>
+                                <span style='font-weight:700;'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span>
+                                <span style='font-weight:800; color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span>
+                            </div>
+                            <div style='color:#888; font-size:11px;'>📅 {tgl_str} | 💳 {row['wallet']} | {ket_str} <span style='color:#B8860B; font-weight:bold;'>#{id_}</span></div>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    with col_edit:
+                        if st.button("📝", key=f"edit_tx_{id_}", use_container_width=True):
+                            st.session_state.edit_id_tx = None if st.session_state.edit_id_tx == id_ else id_
+                            st.session_state.delete_id_tx = None
+                            st.rerun()
+                    with col_del:
+                        if st.button("🗑️", key=f"del_tx_{id_}", use_container_width=True):
+                            st.session_state.delete_id_tx = None if st.session_state.delete_id_tx == id_ else id_
+                            st.session_state.edit_id_tx = None
+                            st.rerun()
 
                 if st.session_state.edit_id_tx == id_:
                     with st.form(f"form_edit_tx_{id_}"):
@@ -728,28 +755,29 @@ elif st.session_state.menu_aktif == 'riwayat':
                 tgl_str = row['tanggal'].strftime('%d-%m-%Y')
                 ket_str = row['keterangan'] if row['keterangan'] else "-"
 
-                col_info, col_edit, col_del = st.columns([6, 1, 1])
-                with col_info:
-                    st.markdown(
-                        f"""<div style='padding:6px 2px; border-bottom:1px solid rgba(139,0,0,0.12); font-size:12px;'>
-                        <div style='display:flex; justify-content:space-between;'>
-                            <span style='font-weight:700;'><span style='color:#c62828;'>{row['dari_wallet']}</span> → <span style='color:#2e7d32;'>{row['ke_wallet']}</span></span>
-                            <span style='font-weight:800;'>Rp {row['jumlah']:,.0f}</span>
-                        </div>
-                        <div style='color:#888; font-size:11px;'>📅 {tgl_str} | {ket_str} <span style='color:#B8860B; font-weight:bold;'>#{id_}</span></div>
-                        </div>""",
-                        unsafe_allow_html=True
-                    )
-                with col_edit:
-                    if st.button("📝", key=f"edit_tf_{id_}", use_container_width=True):
-                        st.session_state.edit_id_tf = None if st.session_state.edit_id_tf == id_ else id_
-                        st.session_state.delete_id_tf = None
-                        st.rerun()
-                with col_del:
-                    if st.button("🗑️", key=f"del_tf_{id_}", use_container_width=True):
-                        st.session_state.delete_id_tf = None if st.session_state.delete_id_tf == id_ else id_
-                        st.session_state.edit_id_tf = None
-                        st.rerun()
+                with st.container(key=f"tfrow_{id_}"):
+                    col_info, col_edit, col_del = st.columns([6, 1, 1])
+                    with col_info:
+                        st.markdown(
+                            f"""<div style='padding:6px 2px; border-bottom:1px solid rgba(139,0,0,0.12); font-size:12px;'>
+                            <div style='display:flex; justify-content:space-between;'>
+                                <span style='font-weight:700;'><span style='color:#c62828;'>{row['dari_wallet']}</span> → <span style='color:#2e7d32;'>{row['ke_wallet']}</span></span>
+                                <span style='font-weight:800;'>Rp {row['jumlah']:,.0f}</span>
+                            </div>
+                            <div style='color:#888; font-size:11px;'>📅 {tgl_str} | {ket_str} <span style='color:#B8860B; font-weight:bold;'>#{id_}</span></div>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    with col_edit:
+                        if st.button("📝", key=f"edit_tf_{id_}", use_container_width=True):
+                            st.session_state.edit_id_tf = None if st.session_state.edit_id_tf == id_ else id_
+                            st.session_state.delete_id_tf = None
+                            st.rerun()
+                    with col_del:
+                        if st.button("🗑️", key=f"del_tf_{id_}", use_container_width=True):
+                            st.session_state.delete_id_tf = None if st.session_state.delete_id_tf == id_ else id_
+                            st.session_state.edit_id_tf = None
+                            st.rerun()
 
                 if st.session_state.edit_id_tf == id_:
                     with st.form(f"form_edit_tf_{id_}"):
