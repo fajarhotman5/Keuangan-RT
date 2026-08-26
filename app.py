@@ -601,135 +601,216 @@ elif st.session_state.menu_aktif == 'riwayat':
                     df_tampil['keterangan'].str.contains(cari, case=False, na=False)
                 ]
 
-            st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 12px; margin-top: 10px; margin-bottom: 2px;'>⚡ Aksi Cepat Transaksi</p>", unsafe_allow_html=True)
-            opsi_pilih = {row['id_transaksi']: f"#{row['id_transaksi']} - {row['kategori']} (Rp {row['jumlah']:,.0f})" for _, row in df_tampil.iterrows()}
+            if df_tampil.empty:
+                st.warning("Tidak ada transaksi yang cocok dengan pencarian.")
 
-            if opsi_pilih:
-                col_action1, col_action2 = st.columns([3, 2])
-                with col_action1:
-                    id_terpilih = st.selectbox("Pilih ID:", options=list(opsi_pilih.keys()), format_func=lambda x: opsi_pilih[x], label_visibility="collapsed")
-                with col_action2:
-                    mode_aksi = st.selectbox("Tindakan:", ["Pilih...", "📝 Edit", "🗑️ Hapus"], label_visibility="collapsed")
+            st.markdown("<hr style='border-top: 1px solid rgba(139, 0, 0, 0.15); margin: 10px 0;'>", unsafe_allow_html=True)
 
-                if id_terpilih and mode_aksi != "Pilih...":
-                    data_row = df_trans[df_trans['id_transaksi'] == id_terpilih].iloc[0]
+            if 'edit_id_tx' not in st.session_state:
+                st.session_state.edit_id_tx = None
+            if 'delete_id_tx' not in st.session_state:
+                st.session_state.delete_id_tx = None
 
-                    if mode_aksi == "📝 Edit":
-                        with st.form("form_cepat_edit_universal"):
-                            st.markdown(f"<p style='color: #B8860B; font-weight: bold; font-size: 12px;'>📝 Edit Data #{id_terpilih}</p>", unsafe_allow_html=True)
-                            new_tgl = st.date_input("Tanggal", data_row['tanggal'])
-                            new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(data_row['jenis']))
-                            new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(data_row['wallet']))
-                            list_kat_opsi = KAT_PEMASUKAN if new_jenis == "Pemasukan" else KAT_PENGELUARAN
-                            if data_row['kategori'] not in list_kat_opsi:
-                                list_kat_opsi = list_kat_opsi + [data_row['kategori']]
-                            new_kat = st.selectbox("Kategori", list_kat_opsi, index=list_kat_opsi.index(data_row['kategori']))
-                            new_jml = st.number_input("Nominal (Rp)", min_value=0, value=int(data_row['jumlah']), step=1000)
-                            new_remb = st.radio("Reimburse:", ["Tidak", "Ya"], index=["Tidak", "Ya"].index(data_row.get('reimburse', 'Tidak')), horizontal=True)
-                            new_ket = st.text_input("Keterangan", value=data_row['keterangan'] if data_row['keterangan'] else "")
-                            col_ef1, col_ef2 = st.columns(2)
-                            with col_ef1:
-                                if st.form_submit_button("Simpan", use_container_width=True):
-                                    try:
-                                        conn = get_connection()
-                                        with conn.cursor() as cursor:
-                                            cursor.execute(
-                                                "UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
-                                                (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_terpilih)
-                                            )
-                                        conn.commit()
-                                        conn.close()
-                                        st.toast("Data berhasil diperbarui!", icon="🎉")
-                                        st.success("Berhasil diubah!")
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Gagal mengubah data: {str(e)}")
-
-                    elif mode_aksi == "🗑️ Hapus":
-                        st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:8px; border-radius:6px; border:1px solid #c62828; margin-bottom:8px; font-size:11px; color:#c62828;'>Hapus data <b>{data_row['kategori']} (Rp {data_row['jumlah']:,.0f})</b>?</div>", unsafe_allow_html=True)
-                        col_del1, col_del2 = st.columns(2)
-                        with col_del1:
-                            if st.button("🔴 Ya, Hapus", key="confirm_del_universal", use_container_width=True):
-                                try:
-                                    conn = get_connection()
-                                    with conn.cursor() as cursor:
-                                        cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_terpilih,))
-                                    conn.commit()
-                                    conn.close()
-                                    st.toast("Data transaksi telah dihapus!", icon="ℹ️")
-                                    st.success("Terhapus!")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Gagal menghapus data: {str(e)}")
-
-            st.markdown("<hr style='border-top: 1px solid rgba(139, 0, 0, 0.15); margin: 12px 0;'>", unsafe_allow_html=True)
-
-            st.markdown("""
-                <style>
-                .desktop-table-container { display: block; width: 100%; margin-bottom: 15px; }
-                .mobile-card-container { display: none; }
-                .custom-table-v2 { width: 100%; border-collapse: collapse; font-size: 12px; }
-                .custom-table-v2 th { color: #8B0000; font-weight: 700; padding: 8px; border-bottom: 2px solid #8B0000; text-align: left; }
-                .custom-table-v2 td { padding: 8px; border-bottom: 1px solid rgba(139, 0, 0, 0.15); }
-                @media (max-width: 768px) {
-                    .desktop-table-container { display: none !important; }
-                    .mobile-card-container { display: block; }
-                    .tx-card { background: transparent; border: 1px solid rgba(139, 0, 0, 0.2); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-                    .tx-card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-                    .tx-card-title { font-weight: 700; font-size: 13px; color: inherit; }
-                    .tx-card-meta { font-size: 11px; color: #666; }
-                    .tx-card-price { font-weight: 800; font-size: 13px; }
-                }
-                </style>
-            """, unsafe_allow_html=True)
-
-            html_desktop_rows = ""
             for _, row in df_tampil.iterrows():
+                id_ = row['id_transaksi']
                 tgl_str = row['tanggal'].strftime('%d-%m-%Y')
                 color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
                 sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
                 ket_str = row['keterangan'] if row['keterangan'] else "-"
-                html_desktop_rows += f"<tr><td>{tgl_str}</td><td>{row['wallet']}</td><td>{row['kategori']}</td><td style='color:{color_p}; font-weight:700;'>{sign_p}Rp {row['jumlah']:,.0f}</td><td>{row.get('reimburse', 'Tidak')}</td><td>{ket_str}</td><td style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</td></tr>"
+                rmb_badge = " • Reimburse" if row.get('reimburse', 'Tidak') == "Ya" else ""
 
-            desktop_html = f"<div class='desktop-table-container'><table class='custom-table-v2'><thead><tr><th>Tanggal</th><th>Wallet</th><th>Kategori</th><th>Nominal</th><th>Reimburse</th><th>Keterangan</th><th>ID</th></tr></thead><tbody>{html_desktop_rows}</tbody></table></div>"
-            st.markdown(desktop_html, unsafe_allow_html=True)
+                col_info, col_edit, col_del = st.columns([6, 1, 1])
+                with col_info:
+                    st.markdown(
+                        f"""<div style='padding:6px 2px; border-bottom:1px solid rgba(139,0,0,0.12); font-size:12px;'>
+                        <div style='display:flex; justify-content:space-between;'>
+                            <span style='font-weight:700;'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span>
+                            <span style='font-weight:800; color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span>
+                        </div>
+                        <div style='color:#888; font-size:11px;'>📅 {tgl_str} | 💳 {row['wallet']} | {ket_str} <span style='color:#B8860B; font-weight:bold;'>#{id_}</span></div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+                with col_edit:
+                    if st.button("📝", key=f"edit_tx_{id_}", use_container_width=True):
+                        st.session_state.edit_id_tx = None if st.session_state.edit_id_tx == id_ else id_
+                        st.session_state.delete_id_tx = None
+                        st.rerun()
+                with col_del:
+                    if st.button("🗑️", key=f"del_tx_{id_}", use_container_width=True):
+                        st.session_state.delete_id_tx = None if st.session_state.delete_id_tx == id_ else id_
+                        st.session_state.edit_id_tx = None
+                        st.rerun()
 
-            html_mobile_cards = ""
-            for _, row in df_tampil.iterrows():
-                tgl_mini = row['tanggal'].strftime('%d-%m')
-                color_p = "#2e7d32" if row['jenis'] == "Pemasukan" else "#c62828"
-                sign_p = "+" if row['jenis'] == "Pemasukan" else "-"
-                rmb_badge = " [Rmb]" if row.get('reimburse', 'Tidak') == "Ya" else ""
-                html_mobile_cards += f"<div class='tx-card'><div class='tx-card-row'><span class='tx-card-title'>{row['kategori']}<span style='color:#c62828; font-size:10px;'>{rmb_badge}</span></span><span class='tx-card-price' style='color:{color_p};'>{sign_p}Rp {row['jumlah']:,.0f}</span></div><div class='tx-card-row' style='margin-bottom:0;'><span class='tx-card-meta'>📅 {tgl_mini} | 💳 {row['wallet']}</span><span class='tx-card-meta' style='font-weight:bold; color:#B8860B;'>#{row['id_transaksi']}</span></div></div>"
-            st.markdown(f"<div class='mobile-card-container'>{html_mobile_cards}</div>", unsafe_allow_html=True)
+                if st.session_state.edit_id_tx == id_:
+                    with st.form(f"form_edit_tx_{id_}"):
+                        st.markdown(f"<p style='color:#B8860B; font-weight:bold; font-size:12px;'>📝 Edit Data #{id_}</p>", unsafe_allow_html=True)
+                        new_tgl = st.date_input("Tanggal", row['tanggal'], format="DD-MM-YYYY")
+                        new_jenis = st.selectbox("Jenis", ["Pemasukan", "Pengeluaran"], index=["Pemasukan", "Pengeluaran"].index(row['jenis']))
+                        new_wallet = st.selectbox("Wallet", LIST_WALLET, index=LIST_WALLET.index(row['wallet']))
+                        list_kat_opsi = KAT_PEMASUKAN if new_jenis == "Pemasukan" else KAT_PENGELUARAN
+                        if row['kategori'] not in list_kat_opsi:
+                            list_kat_opsi = list_kat_opsi + [row['kategori']]
+                        new_kat = st.selectbox("Kategori", list_kat_opsi, index=list_kat_opsi.index(row['kategori']))
+                        new_jml = st.number_input("Nominal (Rp)", min_value=0, value=int(row['jumlah']), step=1000)
+                        new_remb = st.radio("Reimburse:", ["Tidak", "Ya"], index=["Tidak", "Ya"].index(row.get('reimburse', 'Tidak')), horizontal=True)
+                        new_ket = st.text_input("Keterangan", value=row['keterangan'] if row['keterangan'] else "")
+                        col_ef1, col_ef2 = st.columns(2)
+                        with col_ef1:
+                            simpan_edit = st.form_submit_button("Simpan", use_container_width=True)
+                        with col_ef2:
+                            batal_edit = st.form_submit_button("Batal", use_container_width=True)
+                        if simpan_edit:
+                            try:
+                                conn = get_connection()
+                                with conn.cursor() as cursor:
+                                    cursor.execute(
+                                        "UPDATE transaksi SET tanggal=%s, jenis=%s, wallet=%s, kategori=%s, jumlah=%s, reimburse=%s, keterangan=%s WHERE id_transaksi=%s",
+                                        (new_tgl, new_jenis, new_wallet, new_kat, new_jml, new_remb, new_ket, id_)
+                                    )
+                                conn.commit()
+                                conn.close()
+                                st.session_state.edit_id_tx = None
+                                st.toast("Data berhasil diperbarui!", icon="🎉")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal mengubah data: {str(e)}")
+                        if batal_edit:
+                            st.session_state.edit_id_tx = None
+                            st.rerun()
+
+                if st.session_state.delete_id_tx == id_:
+                    st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:8px; border-radius:6px; border:1px solid #c62828; margin-bottom:8px; font-size:11px; color:#c62828;'>Hapus data <b>{row['kategori']} (Rp {row['jumlah']:,.0f})</b>?</div>", unsafe_allow_html=True)
+                    col_d1, col_d2 = st.columns(2)
+                    with col_d1:
+                        if st.button("🔴 Ya, Hapus", key=f"confirm_del_tx_{id_}", use_container_width=True):
+                            try:
+                                conn = get_connection()
+                                with conn.cursor() as cursor:
+                                    cursor.execute("DELETE FROM transaksi WHERE id_transaksi=%s", (id_,))
+                                conn.commit()
+                                conn.close()
+                                st.session_state.delete_id_tx = None
+                                st.toast("Data transaksi telah dihapus!", icon="ℹ️")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal menghapus data: {str(e)}")
+                    with col_d2:
+                        if st.button("Batal", key=f"cancel_del_tx_{id_}", use_container_width=True):
+                            st.session_state.delete_id_tx = None
+                            st.rerun()
 
     with tab_tf:
         if df_transfer.empty:
             st.info("Belum ada riwayat transfer antar wallet.")
         else:
-            html_tf_rows = ""
-            for _, row in df_transfer.iterrows():
+            cari_tf = st.text_input("🔍 Cari Wallet / Keterangan:", key="cari_riwayat_tf")
+            df_tampil_tf = df_transfer.copy()
+            if cari_tf:
+                df_tampil_tf = df_tampil_tf[
+                    df_tampil_tf['dari_wallet'].str.contains(cari_tf, case=False, na=False) |
+                    df_tampil_tf['ke_wallet'].str.contains(cari_tf, case=False, na=False) |
+                    df_tampil_tf['keterangan'].str.contains(cari_tf, case=False, na=False)
+                ]
+
+            if df_tampil_tf.empty:
+                st.warning("Tidak ada transfer yang cocok dengan pencarian.")
+
+            st.markdown("<hr style='border-top: 1px solid rgba(139, 0, 0, 0.15); margin: 10px 0;'>", unsafe_allow_html=True)
+
+            if 'edit_id_tf' not in st.session_state:
+                st.session_state.edit_id_tf = None
+            if 'delete_id_tf' not in st.session_state:
+                st.session_state.delete_id_tf = None
+
+            for _, row in df_tampil_tf.iterrows():
+                id_ = row['id_transfer']
                 tgl_str = row['tanggal'].strftime('%d-%m-%Y')
                 ket_str = row['keterangan'] if row['keterangan'] else "-"
-                html_tf_rows += f"<tr><td>{tgl_str}</td><td style='color:#c62828; font-weight:bold;'>{row['dari_wallet']}</td><td style='color:#2e7d32; font-weight:bold;'>{row['ke_wallet']}</td><td style='font-weight:700;'>Rp {row['jumlah']:,.0f}</td><td>{ket_str}</td><td style='font-weight:bold; color:#B8860B;'>#{row['id_transfer']}</td></tr>"
 
-            tf_html = f"<div style='overflow-x:auto;'><table class='custom-table-v2'><thead><tr><th>Tanggal</th><th>Dari</th><th>Ke</th><th>Jumlah</th><th>Keterangan</th><th>ID</th></tr></thead><tbody>{html_tf_rows}</tbody></table></div>"
-            st.markdown(tf_html, unsafe_allow_html=True)
+                col_info, col_edit, col_del = st.columns([6, 1, 1])
+                with col_info:
+                    st.markdown(
+                        f"""<div style='padding:6px 2px; border-bottom:1px solid rgba(139,0,0,0.12); font-size:12px;'>
+                        <div style='display:flex; justify-content:space-between;'>
+                            <span style='font-weight:700;'><span style='color:#c62828;'>{row['dari_wallet']}</span> → <span style='color:#2e7d32;'>{row['ke_wallet']}</span></span>
+                            <span style='font-weight:800;'>Rp {row['jumlah']:,.0f}</span>
+                        </div>
+                        <div style='color:#888; font-size:11px;'>📅 {tgl_str} | {ket_str} <span style='color:#B8860B; font-weight:bold;'>#{id_}</span></div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
+                with col_edit:
+                    if st.button("📝", key=f"edit_tf_{id_}", use_container_width=True):
+                        st.session_state.edit_id_tf = None if st.session_state.edit_id_tf == id_ else id_
+                        st.session_state.delete_id_tf = None
+                        st.rerun()
+                with col_del:
+                    if st.button("🗑️", key=f"del_tf_{id_}", use_container_width=True):
+                        st.session_state.delete_id_tf = None if st.session_state.delete_id_tf == id_ else id_
+                        st.session_state.edit_id_tf = None
+                        st.rerun()
 
-            st.markdown("<p style='color: #8B0000; font-weight: bold; font-size: 12px; margin-top: 10px; margin-bottom: 2px;'>⚡ Hapus Transfer</p>", unsafe_allow_html=True)
-            opsi_tf = {row['id_transfer']: f"#{row['id_transfer']} - {row['dari_wallet']} ke {row['ke_wallet']} (Rp {row['jumlah']:,.0f})" for _, row in df_transfer.iterrows()}
-            id_tf_pilih = st.selectbox("Pilih transfer:", options=list(opsi_tf.keys()), format_func=lambda x: opsi_tf[x], label_visibility="collapsed")
-            if st.button("🔴 Hapus Transfer Ini", use_container_width=True):
-                try:
-                    conn = get_connection()
-                    with conn.cursor() as cursor:
-                        cursor.execute("DELETE FROM transfer WHERE id_transfer=%s", (id_tf_pilih,))
-                    conn.commit()
-                    conn.close()
-                    st.success("Transfer dihapus!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Gagal: {str(e)}")
+                if st.session_state.edit_id_tf == id_:
+                    with st.form(f"form_edit_tf_{id_}"):
+                        st.markdown(f"<p style='color:#B8860B; font-weight:bold; font-size:12px;'>📝 Edit Transfer #{id_}</p>", unsafe_allow_html=True)
+                        new_tgl_tf = st.date_input("Tanggal", row['tanggal'], format="DD-MM-YYYY")
+                        col_ef1, col_ef2 = st.columns(2)
+                        with col_ef1:
+                            new_dari = st.selectbox("Dari Wallet", LIST_WALLET, index=LIST_WALLET.index(row['dari_wallet']))
+                        with col_ef2:
+                            new_ke = st.selectbox("Ke Wallet", LIST_WALLET, index=LIST_WALLET.index(row['ke_wallet']))
+                        new_jml_tf = st.number_input("Jumlah Transfer (Rp)", min_value=0, value=int(row['jumlah']), step=1000)
+                        new_ket_tf = st.text_input("Keterangan", value=row['keterangan'] if row['keterangan'] else "")
+                        col_bf1, col_bf2 = st.columns(2)
+                        with col_bf1:
+                            simpan_edit_tf = st.form_submit_button("Simpan", use_container_width=True)
+                        with col_bf2:
+                            batal_edit_tf = st.form_submit_button("Batal", use_container_width=True)
+                        if simpan_edit_tf:
+                            if new_dari == new_ke:
+                                st.error("Wallet asal dan tujuan tidak boleh sama.")
+                            elif new_jml_tf <= 0:
+                                st.error("Jumlah transfer harus lebih dari Rp 0.")
+                            else:
+                                try:
+                                    conn = get_connection()
+                                    with conn.cursor() as cursor:
+                                        cursor.execute(
+                                            "UPDATE transfer SET tanggal=%s, dari_wallet=%s, ke_wallet=%s, jumlah=%s, keterangan=%s WHERE id_transfer=%s",
+                                            (new_tgl_tf, new_dari, new_ke, new_jml_tf, new_ket_tf, id_)
+                                        )
+                                    conn.commit()
+                                    conn.close()
+                                    st.session_state.edit_id_tf = None
+                                    st.toast("Transfer berhasil diperbarui!", icon="🎉")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal mengubah transfer: {str(e)}")
+                        if batal_edit_tf:
+                            st.session_state.edit_id_tf = None
+                            st.rerun()
+
+                if st.session_state.delete_id_tf == id_:
+                    st.markdown(f"<div style='background-color:rgba(198,40,40,0.1); padding:8px; border-radius:6px; border:1px solid #c62828; margin-bottom:8px; font-size:11px; color:#c62828;'>Hapus transfer <b>{row['dari_wallet']} → {row['ke_wallet']} (Rp {row['jumlah']:,.0f})</b>?</div>", unsafe_allow_html=True)
+                    col_d1, col_d2 = st.columns(2)
+                    with col_d1:
+                        if st.button("🔴 Ya, Hapus", key=f"confirm_del_tf_{id_}", use_container_width=True):
+                            try:
+                                conn = get_connection()
+                                with conn.cursor() as cursor:
+                                    cursor.execute("DELETE FROM transfer WHERE id_transfer=%s", (id_,))
+                                conn.commit()
+                                conn.close()
+                                st.session_state.delete_id_tf = None
+                                st.toast("Transfer telah dihapus!", icon="ℹ️")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal menghapus transfer: {str(e)}")
+                    with col_d2:
+                        if st.button("Batal", key=f"cancel_del_tf_{id_}", use_container_width=True):
+                            st.session_state.delete_id_tf = None
+                            st.rerun()
 
 # ==========================================
 # MENU: REKAP
