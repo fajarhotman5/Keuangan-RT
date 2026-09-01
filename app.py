@@ -416,7 +416,7 @@ elif st.session_state.menu_aktif == 'unduh':
                 ]))
                 story.append(t_ringkasan)
 
-                # ── SETUP PERIODE PERBANDINGAN ──
+                               # ── SETUP PERIODE PERBANDINGAN ──
                 from dateutil.relativedelta import relativedelta
                 tgl_ref = datetime.now()
                 bulan_ini_start = tgl_ref.replace(day=1)
