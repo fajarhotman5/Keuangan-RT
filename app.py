@@ -145,7 +145,7 @@ if not st.session_state.logged_in:
                     background: linear-gradient(135deg, rgba(139,0,0,0.12), rgba(139,0,0,0.03));
                     border-left: 3px solid #8B0000; border-radius: 10px;'>
             <p style='margin:0; font-size:13px; line-height:1.7; font-style:italic; color:var(--text-color); opacity:0.9;'>
-                "Hai, Fajar! Selamat datang kembali, semangat terus berkunjung ke pintu gerbang
+                "Hai, Bro! Selamat datang kembali, semangat terus berkunjung ke pintu gerbang
                 Rumah Keuangan ini. Percayalah Kebiasaan Baik Ini Akan Berdampak Indah Suatu Saat."
             </p>
         </div>
