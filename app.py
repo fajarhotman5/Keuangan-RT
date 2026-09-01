@@ -965,13 +965,13 @@ else:
                     background: radial-gradient(circle at top, rgba(139,0,0,0.18), rgba(0,0,0,0) 70%);
                     border: 1px solid rgba(139,0,0,0.35);'>
             <p style='margin:0 0 6px 0; font-size:17px; font-weight:800; color:#FFD700; letter-spacing:0.3px;'>
-                I miss you Fajar! 🩶
+                God bless you! 🩶
             </p>
             <p style='margin:0 0 6px 0; font-size:14px; font-style:italic; color:var(--text-color); opacity:0.85;'>
                 Let's Do It!
             </p>
             <p style='margin:0; font-size:13px; font-weight:700; color:#c62828;'>
-                Aku bersamamu :)
+                God with you :)
             </p>
         </div>
         """,
