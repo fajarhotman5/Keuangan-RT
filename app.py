@@ -139,6 +139,19 @@ if not st.session_state.logged_in:
         "</div>",
         unsafe_allow_html=True
     )
+    st.markdown(
+        """
+        <div style='max-width:480px; margin:0 auto 22px auto; padding:16px 20px;
+                    background: linear-gradient(135deg, rgba(139,0,0,0.12), rgba(139,0,0,0.03));
+                    border-left: 3px solid #8B0000; border-radius: 10px;'>
+            <p style='margin:0; font-size:13px; line-height:1.7; font-style:italic; color:var(--text-color); opacity:0.9;'>
+                "Hai, Fajar! Selamat datang kembali, semangat terus berkunjung ke pintu gerbang
+                Rumah Keuangan ini. Percayalah Kebiasaan Baik Ini Akan Berdampak Indah Suatu Saat."
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     with st.form("form_login"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
@@ -153,8 +166,8 @@ if not st.session_state.logged_in:
 
 # --- VALID LISTS ---
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
-KAT_PENGELUARAN = ['Belanja Bulanan', 'Bulanan Keluarga', 'Hiburan, Kesehatan & Pendidikan', 'Jajan', 'Listrik, Air & Internet', 'Makanan & Minuman', 'Transportasi, Servis & Bensin', 'Lain-lain']
-KAT_PEMASUKAN = ['Gapok', 'Insentif', 'Tukin', 'Uang Makan', 'Lainnya']
+KAT_PENGELUARAN = ['Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Transportasi & Bensin', 'Hiburan', 'Bulanan Keluarga', 'Lain-lain']
+KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Uang Makan', 'Kas Minsoc SB2', 'Lainnya']
 
 # --- JUDUL ---
 st.markdown("""
@@ -162,6 +175,17 @@ st.markdown("""
     <div style='text-align: center; margin-bottom: 15px;'>
         <div style='font-family: "Amatic SC", sans-serif; font-size: 34px; font-weight: bold; font-style: italic; color: var(--text-color); letter-spacing: 1px; margin: 0; padding: 0; line-height: 1.1;'>Informasi Keuangan Kei</div>
         <div style='font-size: 11px; color: var(--text-color); font-weight: 500; opacity: 0.6; letter-spacing: 1px; margin-top: 4px; padding: 0;'>HARUS CATAT SETIAP SAAT</div>
+    </div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <div style='text-align:center; margin: -4px 0 16px 0; padding: 8px 12px;'>
+        <p style='margin:0; font-size:14px; font-weight:700; letter-spacing:0.3px;
+                  background: linear-gradient(90deg, #FFD700, #FF8C00, #FFD700);
+                  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                  background-clip: text;'>
+            💛 I miss you, Bro! Let's Do It! Aku bersamamu :)
+        </p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -929,3 +953,27 @@ elif st.session_state.menu_aktif == 'wallet':
         wallet_html += f"""<div style='border: 1px solid {border_c}; background-color: {bg_c}; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-block;'><span style='font-weight: bold; color: {border_c};'>{w_name}:</span> <span style='color: {text_c}; font-weight: 700;'>Rp {w_bal:,.0f}</span></div>"""
     wallet_html += "</div>"
     st.markdown(wallet_html, unsafe_allow_html=True)
+
+# ==========================================
+# BERANDA (belum ada menu dipilih)
+# ==========================================
+else:
+    st.markdown(
+        """
+        <div style='max-width:480px; margin:30px auto 0 auto; padding:20px 24px;
+                    text-align:center; border-radius:14px;
+                    background: radial-gradient(circle at top, rgba(139,0,0,0.18), rgba(0,0,0,0) 70%);
+                    border: 1px solid rgba(139,0,0,0.35);'>
+            <p style='margin:0 0 6px 0; font-size:17px; font-weight:800; color:#FFD700; letter-spacing:0.3px;'>
+                I miss you Fajar! 🩶
+            </p>
+            <p style='margin:0 0 6px 0; font-size:14px; font-style:italic; color:var(--text-color); opacity:0.85;'>
+                Let's Do It!
+            </p>
+            <p style='margin:0; font-size:13px; font-weight:700; color:#c62828;'>
+                Aku bersamamu :)
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
