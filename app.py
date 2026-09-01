@@ -644,7 +644,15 @@ elif st.session_state.menu_aktif == 'riwayat':
             st.info("Belum ada mutasi transaksi.")
         else:
             cari = st.text_input("🔍 Cari Kategori / Keterangan:", key="cari_riwayat")
+
+            col_ftx1, col_ftx2 = st.columns(2)
+            with col_ftx1:
+                tgl_dari_tx = st.date_input("Dari", df_trans['tanggal'].min(), key="riwayat_tx_dari", format="DD-MM-YYYY")
+            with col_ftx2:
+                tgl_sampai_tx = st.date_input("Sampai", df_trans['tanggal'].max(), key="riwayat_tx_sampai", format="DD-MM-YYYY")
+
             df_tampil = df_trans.copy()
+            df_tampil = df_tampil[(df_tampil['tanggal'] >= tgl_dari_tx) & (df_tampil['tanggal'] <= tgl_sampai_tx)]
             if cari:
                 df_tampil = df_tampil[
                     df_tampil['kategori'].str.contains(cari, case=False, na=False) |
@@ -756,7 +764,15 @@ elif st.session_state.menu_aktif == 'riwayat':
             st.info("Belum ada riwayat transfer antar wallet.")
         else:
             cari_tf = st.text_input("🔍 Cari Wallet / Keterangan:", key="cari_riwayat_tf")
+
+            col_ftf1, col_ftf2 = st.columns(2)
+            with col_ftf1:
+                tgl_dari_tf = st.date_input("Dari", df_transfer['tanggal'].min(), key="riwayat_tf_dari", format="DD-MM-YYYY")
+            with col_ftf2:
+                tgl_sampai_tf = st.date_input("Sampai", df_transfer['tanggal'].max(), key="riwayat_tf_sampai", format="DD-MM-YYYY")
+
             df_tampil_tf = df_transfer.copy()
+            df_tampil_tf = df_tampil_tf[(df_tampil_tf['tanggal'] >= tgl_dari_tf) & (df_tampil_tf['tanggal'] <= tgl_sampai_tf)]
             if cari_tf:
                 df_tampil_tf = df_tampil_tf[
                     df_tampil_tf['dari_wallet'].str.contains(cari_tf, case=False, na=False) |
