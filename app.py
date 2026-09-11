@@ -650,12 +650,16 @@ elif st.session_state.menu_aktif == 'riwayat':
                     df_tampil['keterangan'].str.contains(cari, case=False, na=False)
                 ]
 
-            total_tampil_tx = df_tampil['jumlah'].sum()
+            total_masuk_tx = df_tampil[df_tampil['jenis'] == 'Pemasukan']['jumlah'].sum()
+            total_keluar_tx = df_tampil[df_tampil['jenis'] == 'Pengeluaran']['jumlah'].sum()
+            net_tx = total_masuk_tx - total_keluar_tx
+            net_color_tx = "#2e7d32" if net_tx >= 0 else "#c62828"
             with col_total_tx:
                 st.markdown(
-                    f"<div style='text-align:right; padding-top:26px;'>"
-                    f"<span style='font-size:10px; color:#888;'>Total</span><br>"
-                    f"<span style='font-size:14px; font-weight:800; color:#B8860B;'>Rp {total_tampil_tx:,.0f}</span>"
+                    f"<div style='text-align:right; padding-top:20px; font-size:10px; line-height:1.6;'>"
+                    f"<div><span style='color:#888;'>Masuk</span> <span style='font-weight:800; color:#2e7d32;'>Rp {total_masuk_tx:,.0f}</span></div>"
+                    f"<div><span style='color:#888;'>Keluar</span> <span style='font-weight:800; color:#c62828;'>Rp {total_keluar_tx:,.0f}</span></div>"
+                    f"<div><span style='color:#888;'>Net</span> <span style='font-weight:800; color:{net_color_tx};'>Rp {net_tx:,.0f}</span></div>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
