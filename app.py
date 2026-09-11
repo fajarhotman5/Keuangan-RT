@@ -76,6 +76,18 @@ st.markdown("""
         padding: 4px 0 !important;
         width: 100% !important;
     }
+    [class*="st-key-txdates"] div[data-testid="stHorizontalBlock"],
+    [class*="st-key-tfdates"] div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+    }
+    [class*="st-key-txdates"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"],
+    [class*="st-key-tfdates"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+        flex: 1 1 0 !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -632,15 +644,16 @@ elif st.session_state.menu_aktif == 'riwayat':
         if df_trans.empty:
             st.info("Belum ada mutasi transaksi.")
         else:
-            col_search_tx, col_total_tx = st.columns([2, 1])
-            with col_search_tx:
-                cari = st.text_input("🔍 Cari Kategori / Keterangan:", key="cari_riwayat")
+            cari = st.text_input("🔍 Cari Kategori / Keterangan:", key="cari_riwayat")
 
-            col_ftx1, col_ftx2 = st.columns(2)
-            with col_ftx1:
-                tgl_dari_tx = st.date_input("Dari", df_trans['tanggal'].min(), key="riwayat_tx_dari", format="DD-MM-YYYY")
-            with col_ftx2:
-                tgl_sampai_tx = st.date_input("Sampai", df_trans['tanggal'].max(), key="riwayat_tx_sampai", format="DD-MM-YYYY")
+            total_placeholder_tx = st.empty()
+
+            with st.container(key="txdates"):
+                col_ftx1, col_ftx2 = st.columns(2)
+                with col_ftx1:
+                    tgl_dari_tx = st.date_input("Dari", df_trans['tanggal'].min(), key="riwayat_tx_dari", format="DD-MM-YYYY")
+                with col_ftx2:
+                    tgl_sampai_tx = st.date_input("Sampai", df_trans['tanggal'].max(), key="riwayat_tx_sampai", format="DD-MM-YYYY")
 
             df_tampil = df_trans.copy()
             df_tampil = df_tampil[(df_tampil['tanggal'] >= tgl_dari_tx) & (df_tampil['tanggal'] <= tgl_sampai_tx)]
@@ -654,15 +667,14 @@ elif st.session_state.menu_aktif == 'riwayat':
             total_keluar_tx = df_tampil[df_tampil['jenis'] == 'Pengeluaran']['jumlah'].sum()
             net_tx = total_masuk_tx - total_keluar_tx
             net_color_tx = "#2e7d32" if net_tx >= 0 else "#c62828"
-            with col_total_tx:
-                st.markdown(
-                    f"<div style='text-align:right; padding-top:20px; font-size:10px; line-height:1.6;'>"
-                    f"<div><span style='color:#888;'>Masuk</span> <span style='font-weight:800; color:#2e7d32;'>Rp {total_masuk_tx:,.0f}</span></div>"
-                    f"<div><span style='color:#888;'>Keluar</span> <span style='font-weight:800; color:#c62828;'>Rp {total_keluar_tx:,.0f}</span></div>"
-                    f"<div><span style='color:#888;'>Net</span> <span style='font-weight:800; color:{net_color_tx};'>Rp {net_tx:,.0f}</span></div>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+            total_placeholder_tx.markdown(
+                f"<div style='display:flex; justify-content:space-between; gap:6px; font-size:11px; padding:4px 2px 12px 2px;'>"
+                f"<span style='white-space:nowrap;'><span style='color:#888;'>Masuk</span> <span style='font-weight:800; color:#2e7d32;'>Rp {total_masuk_tx:,.0f}</span></span>"
+                f"<span style='white-space:nowrap;'><span style='color:#888;'>Keluar</span> <span style='font-weight:800; color:#c62828;'>Rp {total_keluar_tx:,.0f}</span></span>"
+                f"<span style='white-space:nowrap;'><span style='color:#888;'>Net</span> <span style='font-weight:800; color:{net_color_tx};'>Rp {net_tx:,.0f}</span></span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
             if df_tampil.empty:
                 st.warning("Tidak ada transaksi yang cocok dengan pencarian.")
@@ -768,15 +780,16 @@ elif st.session_state.menu_aktif == 'riwayat':
         if df_transfer.empty:
             st.info("Belum ada riwayat transfer antar wallet.")
         else:
-            col_search_tf, col_total_tf = st.columns([2, 1])
-            with col_search_tf:
-                cari_tf = st.text_input("🔍 Cari Wallet / Keterangan:", key="cari_riwayat_tf")
+            cari_tf = st.text_input("🔍 Cari Wallet / Keterangan:", key="cari_riwayat_tf")
 
-            col_ftf1, col_ftf2 = st.columns(2)
-            with col_ftf1:
-                tgl_dari_tf = st.date_input("Dari", df_transfer['tanggal'].min(), key="riwayat_tf_dari", format="DD-MM-YYYY")
-            with col_ftf2:
-                tgl_sampai_tf = st.date_input("Sampai", df_transfer['tanggal'].max(), key="riwayat_tf_sampai", format="DD-MM-YYYY")
+            total_placeholder_tf = st.empty()
+
+            with st.container(key="tfdates"):
+                col_ftf1, col_ftf2 = st.columns(2)
+                with col_ftf1:
+                    tgl_dari_tf = st.date_input("Dari", df_transfer['tanggal'].min(), key="riwayat_tf_dari", format="DD-MM-YYYY")
+                with col_ftf2:
+                    tgl_sampai_tf = st.date_input("Sampai", df_transfer['tanggal'].max(), key="riwayat_tf_sampai", format="DD-MM-YYYY")
 
             df_tampil_tf = df_transfer.copy()
             df_tampil_tf = df_tampil_tf[(df_tampil_tf['tanggal'] >= tgl_dari_tf) & (df_tampil_tf['tanggal'] <= tgl_sampai_tf)]
@@ -788,14 +801,12 @@ elif st.session_state.menu_aktif == 'riwayat':
                 ]
 
             total_tampil_tf = df_tampil_tf['jumlah'].sum()
-            with col_total_tf:
-                st.markdown(
-                    f"<div style='text-align:right; padding-top:26px;'>"
-                    f"<span style='font-size:10px; color:#888;'>Total</span><br>"
-                    f"<span style='font-size:14px; font-weight:800; color:#B8860B;'>Rp {total_tampil_tf:,.0f}</span>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+            total_placeholder_tf.markdown(
+                f"<div style='text-align:right; font-size:11px; padding:4px 2px 12px 2px;'>"
+                f"<span style='color:#888;'>Total</span> <span style='font-weight:800; color:#B8860B;'>Rp {total_tampil_tf:,.0f}</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
             if df_tampil_tf.empty:
                 st.warning("Tidak ada transfer yang cocok dengan pencarian.")
