@@ -178,17 +178,6 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-    <div style='text-align:center; margin: -4px 0 16px 0; padding: 8px 12px;'>
-        <p style='margin:0; font-size:14px; font-weight:700; letter-spacing:0.3px;
-                  background: linear-gradient(90deg, #FFD700, #FF8C00, #FFD700);
-                  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                  background-clip: text;'>
-            💛 I miss you, Bro! Let's Do It! Aku bersamamu :)
-        </p>
-    </div>
-""", unsafe_allow_html=True)
-
 # --- DATA FETCHING ---
 conn = get_connection()
 df_trans = pd.read_sql("SELECT * FROM transaksi ORDER BY tanggal DESC, id_transaksi DESC", conn)
@@ -416,7 +405,7 @@ elif st.session_state.menu_aktif == 'unduh':
                 ]))
                 story.append(t_ringkasan)
 
-                               # ── SETUP PERIODE PERBANDINGAN ──
+                # ── SETUP PERIODE PERBANDINGAN ──
                 from dateutil.relativedelta import relativedelta
                 tgl_ref = datetime.now()
                 bulan_ini_start = tgl_ref.replace(day=1)
@@ -643,7 +632,9 @@ elif st.session_state.menu_aktif == 'riwayat':
         if df_trans.empty:
             st.info("Belum ada mutasi transaksi.")
         else:
-            cari = st.text_input("🔍 Cari Kategori / Keterangan:", key="cari_riwayat")
+            col_search_tx, col_total_tx = st.columns([2, 1])
+            with col_search_tx:
+                cari = st.text_input("🔍 Cari Kategori / Keterangan:", key="cari_riwayat")
 
             col_ftx1, col_ftx2 = st.columns(2)
             with col_ftx1:
@@ -658,6 +649,16 @@ elif st.session_state.menu_aktif == 'riwayat':
                     df_tampil['kategori'].str.contains(cari, case=False, na=False) |
                     df_tampil['keterangan'].str.contains(cari, case=False, na=False)
                 ]
+
+            total_tampil_tx = df_tampil['jumlah'].sum()
+            with col_total_tx:
+                st.markdown(
+                    f"<div style='text-align:right; padding-top:26px;'>"
+                    f"<span style='font-size:10px; color:#888;'>Total</span><br>"
+                    f"<span style='font-size:14px; font-weight:800; color:#B8860B;'>Rp {total_tampil_tx:,.0f}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
 
             if df_tampil.empty:
                 st.warning("Tidak ada transaksi yang cocok dengan pencarian.")
@@ -763,7 +764,9 @@ elif st.session_state.menu_aktif == 'riwayat':
         if df_transfer.empty:
             st.info("Belum ada riwayat transfer antar wallet.")
         else:
-            cari_tf = st.text_input("🔍 Cari Wallet / Keterangan:", key="cari_riwayat_tf")
+            col_search_tf, col_total_tf = st.columns([2, 1])
+            with col_search_tf:
+                cari_tf = st.text_input("🔍 Cari Wallet / Keterangan:", key="cari_riwayat_tf")
 
             col_ftf1, col_ftf2 = st.columns(2)
             with col_ftf1:
@@ -779,6 +782,16 @@ elif st.session_state.menu_aktif == 'riwayat':
                     df_tampil_tf['ke_wallet'].str.contains(cari_tf, case=False, na=False) |
                     df_tampil_tf['keterangan'].str.contains(cari_tf, case=False, na=False)
                 ]
+
+            total_tampil_tf = df_tampil_tf['jumlah'].sum()
+            with col_total_tf:
+                st.markdown(
+                    f"<div style='text-align:right; padding-top:26px;'>"
+                    f"<span style='font-size:10px; color:#888;'>Total</span><br>"
+                    f"<span style='font-size:14px; font-weight:800; color:#B8860B;'>Rp {total_tampil_tf:,.0f}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
 
             if df_tampil_tf.empty:
                 st.warning("Tidak ada transfer yang cocok dengan pencarian.")
@@ -974,22 +987,4 @@ elif st.session_state.menu_aktif == 'wallet':
 # BERANDA (belum ada menu dipilih)
 # ==========================================
 else:
-    st.markdown(
-        """
-        <div style='max-width:480px; margin:30px auto 0 auto; padding:20px 24px;
-                    text-align:center; border-radius:14px;
-                    background: radial-gradient(circle at top, rgba(139,0,0,0.18), rgba(0,0,0,0) 70%);
-                    border: 1px solid rgba(139,0,0,0.35);'>
-            <p style='margin:0 0 6px 0; font-size:17px; font-weight:800; color:#FFD700; letter-spacing:0.3px;'>
-                God bless you! 🩶
-            </p>
-            <p style='margin:0 0 6px 0; font-size:14px; font-style:italic; color:var(--text-color); opacity:0.85;'>
-                Let's Do It!
-            </p>
-            <p style='margin:0; font-size:13px; font-weight:700; color:#c62828;'>
-                God with you :)
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    pass
