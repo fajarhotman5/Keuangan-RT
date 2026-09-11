@@ -178,7 +178,7 @@ if not st.session_state.logged_in:
 
 # --- VALID LISTS ---
 LIST_WALLET = ['Cash', 'Dana', 'Gopay', 'Jago', 'Mandiri', 'OVO', 'ShopeePay']
-KAT_PENGELUARAN = ['Bensi, Servis & Transportasi', 'Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Hiburan, Kesehatan & Pendidikan', 'Bulanan Keluarga', 'Minsoc SB2', 'Lain-lain']
+KAT_PENGELUARAN = ['Transportasi & Servis Kendaraan', 'Makanan & Minuman', 'Jajan', 'Listrik, Air & Internet', 'Belanja Bulanan', 'Hiburan, Kesehatan & Pendidikan', 'Bulanan Keluarga', 'Minsoc SB2', 'Lain-lain']
 KAT_PEMASUKAN = ['Gapok', 'Tukin', 'Uang Makan', 'Kas Minsoc SB2', 'Lainnya']
 
 # --- JUDUL ---
