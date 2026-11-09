@@ -581,6 +581,50 @@ elif st.session_state.menu_aktif == 'unduh':
                         ('RIGHTPADDING', (0,0), (-1,-1), 8),
                     ]))
                     story.append(t_rmb)
+                                        # ── RINCIAN REIMBURSE (YA) ──
+                    from xml.sax.saxutils import escape
+                    df_rmb_ya = df_filter[
+                        (df_filter['jenis'] == 'Pengeluaran') & (df_filter['reimburse'] == 'Ya')
+                    ].sort_values(['tanggal', 'id_transaksi'])
+
+                    if not df_rmb_ya.empty:
+                        story.append(Paragraph("RINCIAN REIMBURSE (YA)", section_style))
+                        rinci_data = [[
+                            Paragraph("TANGGAL", header_style),
+                            Paragraph("WALLET", header_style),
+                            Paragraph("KATEGORI", header_style),
+                            Paragraph("NOMINAL", header_style),
+                            Paragraph("KETERANGAN", header_style),
+                        ]]
+                        for _, r in df_rmb_ya.iterrows():
+                            rinci_data.append([
+                                Paragraph(r['tanggal'].strftime('%d-%m-%Y'), cell_center),
+                                Paragraph(escape(str(r['wallet'])), cell_style),
+                                Paragraph(escape(str(r['kategori'])), cell_style),
+                                Paragraph(f"Rp {r['jumlah']:,.0f}", cell_bold),
+                                Paragraph(escape(str(r['keterangan'] or '-')), cell_style),
+                            ])
+                        total_rmb_ya = df_rmb_ya['jumlah'].sum()
+                        rinci_data.append([
+                            Paragraph("TOTAL", cell_bold), "", "",
+                            Paragraph(f"Rp {total_rmb_ya:,.0f}", cell_bold), ""
+                        ])
+
+                        t_rinci = Table(rinci_data, colWidths=[65, 70, 120, 85, 160], repeatRows=1)
+                        t_rinci.setStyle(TableStyle([
+                            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#8B0000')),
+                            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E5E5')),
+                            ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.white, colors.HexColor('#F9F9F9')]),
+                            ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F3E5E5')),
+                            ('SPAN', (0,-1), (2,-1)),
+                            ('LINEABOVE', (0,-1), (-1,-1), 1.5, colors.HexColor('#8B0000')),
+                            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                            ('TOPPADDING', (0,0), (-1,-1), 5),
+                            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+                            ('LEFTPADDING', (0,0), (-1,-1), 6),
+                            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+                        ]))
+                        story.append(t_rinci)
 
                 # ── DETAIL MUTASI ──
                 story.append(Paragraph("DETAIL MUTASI TRANSAKSI", section_style))
